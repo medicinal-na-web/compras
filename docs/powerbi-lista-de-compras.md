@@ -7,8 +7,7 @@ Serve de especificação para replicar o painel fora do Power BI.
 
 O `.pbix` **não acessa o banco do Fórmula Certa (Firebird) diretamente**. Todas as tabelas vêm de um
 **Dataflow do Power BI** (workspace `415849bf-7d91-4106-a252-ea8d013a8b17`,
-dataflow `d4798ed0-f187-40fa-8b4c-d826a1421870`). O SQL contra o banco está no dataflow,
-(o SQL do dataflow está na seção "SQL do dataflow" abaixo).
+dataflow `d4798ed0-f187-40fa-8b4c-d826a1421870`). O SQL do dataflow está na seção "SQL do dataflow (Firebird)" abaixo.
 
 | Entidade do dataflow | Conteúdo | Linhas no snapshot |
 |---|---|---|
