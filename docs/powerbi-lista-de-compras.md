@@ -5,10 +5,10 @@ Serve de especificação para replicar o painel fora do Power BI.
 
 ## 1. Origem dos dados
 
-O `.pbix` **não acessa o banco do Fórmula Certa diretamente**. Todas as tabelas vêm de um
+O `.pbix` **não acessa o banco do Fórmula Certa (Firebird) diretamente**. Todas as tabelas vêm de um
 **Dataflow do Power BI** (workspace `415849bf-7d91-4106-a252-ea8d013a8b17`,
 dataflow `d4798ed0-f187-40fa-8b4c-d826a1421870`). O SQL contra o banco está no dataflow,
-que precisa ser exportado à parte (Power BI Service → dataflow → *Exportar .json*).
+(o SQL do dataflow está na seção "SQL do dataflow" abaixo).
 
 | Entidade do dataflow | Conteúdo | Linhas no snapshot |
 |---|---|---|
@@ -27,6 +27,28 @@ que precisa ser exportado à parte (Power BI Service → dataflow → *Exportar 
 6. Substitui `null` por `0` nessas colunas.
 
 Relacionamento do modelo: `FC03140[CDPRO]` (N) → `FC03000[CDPRO]` (1), filtro em uma direção.
+
+### SQL do dataflow (Firebird)
+
+As consultas que alimentam o dataflow estão em `sql/formula-certa/`:
+
+| Arquivo | Entidade | Resumo |
+|---|---|---|
+| `dataset_compras_fc03140.sql` | `Dataset_Compras_FC03140` | `SUM(ESTAT)` por produto, separado em filial 1 e filial 2 |
+| `dataset_compras_12110_18100.sql` | `DataSet_Compras_12110_18100` | Consumo de 30/90 dias: FC12110 (fórmulas, por `CDPRIN`, custo `PRCUSTO`) + FC18100/FC18000 (ordens de produção, sufixo `FP`, custo `QTREAL × PRCOM` atual) |
+
+`CONSOLIDADO… = SOMA… + SOMA…FP`. Conferido no snapshot do `.pbix`: bate em 100% das linhas.
+
+Pontos de atenção nessas consultas (a confirmar antes de portar):
+
+- **Junção FC18100 → FC18000 só por `NRORD`.** A FC03140 guarda `CDFILNRORD` + `NRORD`, o que sugere
+  que a chave da OP é (filial, número). Se o mesmo `NRORD` existir em duas filiais, o consumo FP é contado em dobro.
+  Para checar: `SELECT NRORD, COUNT(*) FROM FC18000 GROUP BY NRORD HAVING COUNT(*) > 1`.
+- **Estoque soma `ESTAT` de todos os lotes**, inclusive negativos e de qualquer `STLOT`. As medidas DAX antigas
+  (`EstoqueFilial1/2`) filtravam `ESTAT > 0`.
+- **Custo com bases diferentes**: FC12110 usa o `PRCUSTO` gravado no movimento; a parte FP usa o `PRCOM` atual do cadastro.
+- **Frequência conta linhas de item**, não receitas/OPs distintas.
+- Nenhuma das consultas filtra filial ou status (fórmulas/OPs canceladas entram no consumo).
 
 ## 2. Páginas
 
@@ -141,7 +163,9 @@ Esses números precisam ser conferidos contra o Power BI (exportar a matriz para
 
 ## 6. Pendências
 
-- [ ] Exportar o JSON do dataflow para obter o SQL contra o Fórmula Certa (tabelas FC03000, FC03140, FC12110, FC18100).
+- [x] SQL do dataflow para estoque e consumo (`sql/formula-certa/`).
+- [ ] SQL da entidade `FC03000` e `FC03140` do dataflow (se tiverem filtro; senão é `SELECT *`).
+- [ ] Confirmar os pontos de atenção do SQL (chave da OP, estoque negativo, cancelados).
 - [ ] Confirmar o significado de filial 1 × filial 2 e do peso 0,6 no estoque da filial 1.
 - [ ] Decidir se o limite de 30 dias (ajuste de dezembro) volta para 45 e se deve virar parâmetro editável.
 - [ ] Exportar a matriz do Power BI para validar os números da seção 5.
