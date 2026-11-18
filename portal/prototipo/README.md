@@ -3,7 +3,8 @@
 `lista-compras.html` é o modelo da página publicada como artefato (claude.ai). O marcador `__DADOS__`
 recebe a lista de produtos em JSON: `[cdpro, descr, situa, unida, prcomn, controlado, porta,
 estoque_f1, estoque_f2, consumo_fisico_30d, consumo_fisico_90d, consumo_custo_90d, consumo_frequencia_90d,
-ultimo_fornecedor_cnpj]`.
+ultimo_fornecedor_cnpj]`. O marcador `__FORNECEDORES__` recebe `{cnpj: [nome fantasia, razão social]}`
+da FC02000 (`sql/formula-certa/compras_fornecedor.sql`).
 
 Os dados não ficam no repositório (custos e estoques do ERP). Hoje vêm do snapshot do
 `LISTADECOMPRAS.V7.pbix`; quando a carga do n8n estiver ativa, vêm da view `compras_lista` do Supabase.

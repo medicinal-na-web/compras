@@ -58,6 +58,31 @@ begin
   return n;
 end $$;
 
+create table if not exists public.compras_fornecedor (
+  cnpj      text primary key,
+  fornecid  integer,
+  fantasia  text,
+  razao     text,
+  synced_at timestamptz not null default now()
+);
+comment on table public.compras_fornecedor is
+  'FIREBIRD - cadastro de fornecedores FC02000 (sql/formula-certa/compras_fornecedor.sql). Nome mostrado no portal = fantasia. O n8n tira os bytes nulos (chr(0)) do Firebird antes de enviar: o jsonb não os aceita.';
+
+create or replace function public.compras_sync_cadastro_fornecedor(p jsonb)
+returns integer language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  delete from public.compras_fornecedor where true;
+  insert into public.compras_fornecedor (cnpj, fornecid, fantasia, razao)
+  select distinct on (c) c, "FORNECID", nullif(trim("FANTA"), ''), nullif(trim("RAZAO"), '')
+  from jsonb_to_recordset(p) as x("FORNECID" integer, "NRCNPJ" text, "RAZAO" text, "FANTA" text),
+       lateral (select trim("NRCNPJ") as c) k
+  where coalesce(c, '') <> ''
+  order by c, "FORNECID" desc;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
 -- ---------------------------------------------------------------- ajustes do pedido
 
 create table if not exists public.compras_pedido_ajuste (
@@ -123,6 +148,7 @@ begin
                   then to_jsonb(l) - 'prcom' - 'prcomn' - 'custo_90d' - 'total_compra'
                   else to_jsonb(l) || jsonb_build_object(
                          'cdfnr', f.cdfnr,
+                         'fornecedor', coalesce(cf.fantasia, f.cdfnr),
                          'total_pedido', l.prcomn * coalesce(aj.quantidade, l.quantidade_compra))
              end
              || jsonb_build_object('quantidade_pedido', coalesce(aj.quantidade, l.quantidade_compra),
@@ -130,6 +156,7 @@ begin
                                    'ajustado_por', aj.ajustado_por))
     from public.compras_lista l
     left join public.compras_produto_fornecedor f on f.cdpro = l.cdpro
+    left join public.compras_fornecedor cf on cf.cnpj = f.cdfnr
     left join public.compras_pedido_ajuste aj on aj.cdpro = l.cdpro), '[]'::jsonb);
 end $$;
 
@@ -200,20 +227,21 @@ end $$;
 alter table public.compras_acesso             enable row level security;
 alter table public.compras_acesso_hist        enable row level security;
 alter table public.compras_produto_fornecedor enable row level security;
+alter table public.compras_fornecedor         enable row level security;
 alter table public.compras_pedido_ajuste      enable row level security;
 alter table public.compras_pedido_ajuste_hist enable row level security;
 
-revoke all on public.compras_acesso, public.compras_acesso_hist, public.compras_produto_fornecedor,
+revoke all on public.compras_acesso, public.compras_acesso_hist, public.compras_produto_fornecedor, public.compras_fornecedor,
               public.compras_pedido_ajuste, public.compras_pedido_ajuste_hist
   from anon, authenticated;
 
-revoke all on function public.compras_sync_fornecedor(jsonb), public.compras_meu_acesso(),
+revoke all on function public.compras_sync_fornecedor(jsonb), public.compras_sync_cadastro_fornecedor(jsonb), public.compras_meu_acesso(),
                        public.compras_exige(text[]), public.compras_lista_portal(),
                        public.compras_ajustar(integer, numeric), public.compras_salvar_parametros(jsonb),
                        public.compras_salvar_acesso(text, text, text, text, boolean),
                        public.compras_listar_acessos()
   from public, anon;
-grant execute on function public.compras_sync_fornecedor(jsonb) to service_role;
+grant execute on function public.compras_sync_fornecedor(jsonb), public.compras_sync_cadastro_fornecedor(jsonb) to service_role;
 grant execute on function public.compras_meu_acesso(), public.compras_lista_portal(),
                           public.compras_ajustar(integer, numeric), public.compras_salvar_parametros(jsonb),
                           public.compras_salvar_acesso(text, text, text, text, boolean),
