@@ -73,6 +73,15 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
 .tbl td.heat i{font-style:normal; font-weight:600; font-size:11px; color:var(--mut); margin-left:4px}
 .legenda{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mut)}
 .legenda .barra{width:120px; height:10px; border-radius:5px; background:linear-gradient(90deg, color-mix(in srgb, var(--heat) 4%, transparent), color-mix(in srgb, var(--heat) 60%, transparent)); border:1px solid var(--line)}
+.qed{display:inline-flex; align-items:stretch; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--field)}
+.qed button{padding:4px 10px; border-radius:0; background:var(--soft); color:var(--ink); font-size:15px; line-height:1}
+.qed button:hover{background:var(--line)}
+.qed input{width:84px; text-align:right; border:0; border-radius:0; padding:5px 6px; font-weight:700; font-variant-numeric:tabular-nums; background:transparent}
+.qsug{font-size:11px; color:var(--mut); margin-top:3px}
+.qsug button{font-size:11px; padding:0; background:none; color:var(--brand); text-decoration:underline; font-weight:600}
+tr.ajust .qed{border-color:var(--brand2); box-shadow:0 0 0 1px var(--brand2)}
+tr.ajust .qed input{color:var(--brand)}
+button.perigo{color:var(--err)}
 .ctl{font-size:11px; font-weight:700; color:var(--err); margin-left:6px}
 .cobfiltro{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding-top:12px; border-top:1px dashed var(--line)}
 .cobfiltro .ctipo{flex:1 1 240px; max-width:320px} .cobfiltro .cdias{flex:0 1 120px}
@@ -108,7 +117,7 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
   <section id="sec-lista" class="card">
     <div class="filtros">
       <div><label for="fBusca">Buscar (código ou descrição)</label><input id="fBusca" placeholder="ex.: 10928, pullulan"></div>
-      <div><label for="fIndica">Mostrar</label><select id="fIndica"><option value="comprar" selected>Só indicados para compra</option><option value="todos">Todos os produtos</option><option value="nao">Não indicados</option></select></div>
+      <div><label for="fIndica">Mostrar</label><select id="fIndica"><option value="comprar" selected>Itens do pedido</option><option value="todos">Todos os produtos</option><option value="nao">Fora do pedido</option></select></div>
       <div><label for="fLista">Lista</label><select id="fLista"><option value="">Todas</option><option value="1">Lista 1</option><option value="2">Lista 2</option><option value="3">Lista 3</option><option value="4">Lista 4</option><option value="5">Lista 5</option></select></div>
       <div><label for="fCtrl">Controlados</label><select id="fCtrl"><option value="">Todos</option><option value="1">Só controlados</option><option value="0">Sem controlados</option></select></div>
       <div><label for="fSitua">Situação no cadastro</label><select id="fSitua"><option value="">Todas</option><option value="A">Ativos (A)</option><option value="I">Inativos (I)</option></select></div>
@@ -126,7 +135,7 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
         <p class="mut" id="conta"></p>
         <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
       </div>
-      <div class="row"><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
+      <div class="row"><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
     <div class="tw"><table class="tbl" id="tbl"><thead><tr>
       <th data-k="cdpro">Cód.</th>
@@ -138,7 +147,7 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
       <th data-k="media" class="r">Consumo/dia</th>
       <th data-k="dg" class="r">Cobertura geral</th>
       <th data-k="d2" class="r">Cobertura F2</th>
-      <th data-k="qtd" class="r">Qtd. sugerida</th>
+      <th data-k="qtdF" class="r" title="Sugestão do cálculo. Ajuste com − e + ou digitando.">Quantidade</th>
       <th data-k="prcomn" class="r">Preço compra</th>
       <th data-k="total" class="r" aria-sort="descending">Total</th>
       <th data-k="impacto" class="r" title="Participação do item no valor sugerido dos indicados na tela">Impacto no pedido</th>
@@ -164,7 +173,7 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
       <div><label for="pCobGeral">Cobertura geral máxima (dias)</label><input id="pCobGeral" type="number" min="0" step="1"><p>Listas 3, 4 e 5 compram quando a cobertura geral fica até este valor. Listas 1 e 2 usam para controlados.</p></div>
       <div><label for="pCobF2">Cobertura da filial 2 máxima (dias)</label><input id="pCobF2" type="number" min="0" step="1"><p>Listas 1 e 2. Era 45; foi reduzido para 30 em 15/12/2025, com a orientação de voltar para 45 assim que possível.</p></div>
       <div><label for="pPeso">Peso do estoque da filial 1</label><input id="pPeso" type="number" min="0" max="1" step="0.05"><p>Cobertura geral = (estoque F1 × peso + estoque F2) ÷ consumo diário.</p></div>
-      <div><label for="pDias">Dias de compra</label><input id="pDias" type="number" min="1" step="1"><p>Quantidade = consumo diário × dias, arredondada para cima até a próxima embalagem.</p></div>
+      <div><label for="pDias">Dias de compra</label><input id="pDias" type="number" min="1" step="1"><p>Quantidade = consumo diário × dias, arredondada para cima até a próxima embalagem. Ajustes manuais da quantidade continuam valendo quando você muda os parâmetros.</p></div>
       <div><label for="pCorteA">Corte da curva A</label><input id="pCorteA" type="number" min="0" max="1" step="0.01"><p>Produtos que somam até esta fração do total acumulado.</p></div>
       <div><label for="pCorteB">Corte da curva B</label><input id="pCorteB" type="number" min="0" max="1" step="0.01"><p>Entre o corte A e este valor. O resto é curva C.</p></div>
     </div>
@@ -181,6 +190,7 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
         <li><b>Consumo diário</b> = (consumo de 30 dias + consumo de 90 dias) ÷ 120. Os últimos 30 dias contam em dobro.</li>
         <li><b>Cobertura</b>: geral = (estoque F1 × 0,6 + estoque F2) ÷ consumo diário; filial 2 = estoque F2 ÷ consumo diário.</li>
         <li><b>Indicação</b>: Listas 3–5 compram com cobertura geral até 45 dias (Lista 5 só se teve consumo). Listas 1–2 compram com cobertura da filial 2 até 30 dias; se o produto for controlado, a cobertura geral também precisa estar abaixo de 45.</li>
+        <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
         <li><b>Quantidade</b> = consumo diário × 30 dias, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
@@ -192,6 +202,11 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
 const D = __DADOS__;
 const PADRAO = {cobGeral:45, cobF2:30, peso:0.6, dias:30, corteA:0.8, corteB:0.95};
 const EMB = [1,5,10,25,50,100,250,500,1000,2500,5000,10000,25000,50000,100000,150000,300000];
+// passo do − / + conforme a quantidade sugerida (embalagem): a partir de, passo
+const PASSOS = [[25000, 5000], [2500, 500], [500, 50], [50, 10], [0, 1]];
+let AJ = {};   // ajustes manuais: cdpro -> quantidade (só neste navegador, por enquanto)
+try { AJ = JSON.parse(localStorage.getItem('compras.ajustes') || '{}') || {}; } catch (e) {}
+const salvarAJ = () => { try { localStorage.setItem('compras.ajustes', JSON.stringify(AJ)); } catch (e) {} };
 const LISTA_REGRA = {1:'Cobertura F2 ≤ limite F2 (controlado: e geral < limite geral)',2:'Cobertura F2 ≤ limite F2 (controlado: e geral < limite geral)',3:'Cobertura geral ≤ limite geral',4:'Cobertura geral ≤ limite geral',5:'Teve consumo e cobertura geral ≤ limite geral'};
 
 const prods = D.map(r => ({cdpro:r[0], descr:r[1], situa:r[2], unida:r[3], prcomn:r[4], ctrl:r[5], porta:r[6], e1:r[7], e2:r[8], f30:r[9], f90:r[10], c90:r[11], q90:r[12]}));
@@ -229,9 +244,24 @@ function calcular() {
     else if (p.lista >= 3) p.comprar = dg <= P.cobGeral;
     else p.comprar = d2 <= P.cobF2 && (p.ctrl === 0 || dg < P.cobGeral);
     const nec = (p.f30 + p.f90) * P.dias / 120;
-    p.qtd = p.comprar && nec > 0 ? (EMB.find(x => x >= nec) ?? 0) : 0;
-    p.total = p.prcomn * p.qtd;
+    const emb = nec > 0 ? (EMB.find(x => x >= nec) ?? EMB[EMB.length - 1]) : 0;
+    p.qtd = p.comprar ? (nec > EMB[EMB.length - 1] ? 0 : emb) : 0;
+    p.passo = PASSOS.find(([de]) => (p.qtd || emb) >= de)[1];
   });
+  aplicarAjustes();
+}
+function aplicarAjustes() {
+  prods.forEach(p => {
+    p.ajustado = p.cdpro in AJ;
+    p.qtdF = p.ajustado ? AJ[p.cdpro] : p.qtd;
+    p.total = p.prcomn * p.qtdF;
+  });
+}
+function ajustar(cd, valor) {
+  const p = prods.find(x => x.cdpro === cd); if (!p) return;
+  valor = Math.max(0, Math.round(valor));
+  if (valor === p.qtd) delete AJ[cd]; else AJ[cd] = valor;
+  salvarAJ(); aplicarAjustes(); filtrar(); tabela(); curvas();
 }
 
 const fmtN = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:2});
@@ -243,17 +273,19 @@ const $ = id => document.getElementById(id);
 
 // os cartões resumem o que está filtrado na tela
 function kpis() {
-  const c = filtrados.filter(p => p.comprar);
+  const c = filtrados.filter(p => p.qtdF > 0);
   const total = c.reduce((s, p) => s + p.total, 0);
+  const sugerido = filtrados.reduce((s, p) => s + p.prcomn * p.qtd, 0);
   const semPreco = c.filter(p => !p.prcomn).length;
   const ctrl = c.filter(p => p.ctrl).length;
   const l12 = c.filter(p => p.lista <= 2);
+  const nAj = filtrados.filter(p => p.ajustado).length;
   $('kpis').innerHTML = [
-    ['Indicados para compra', fmtI.format(c.length), `na tela, de ${fmtI.format(prods.length)} produtos`],
-    ['Valor sugerido', fmtR.format(total), 'soma dos indicados na tela'],
+    ['Itens no pedido', fmtI.format(c.length), `na tela, de ${fmtI.format(prods.length)} produtos`],
+    ['Valor do pedido', fmtR.format(total), nAj ? `sugerido ${fmtR.format(sugerido)} · ${fmtI.format(nAj)} ${nAj === 1 ? 'ajuste' : 'ajustes'}` : 'soma do que está na tela'],
     ['Listas 1 e 2', fmtI.format(l12.length), fmtR.format(l12.reduce((s, p) => s + p.total, 0))],
-    ['Controlados indicados', fmtI.format(ctrl), 'portaria preenchida'],
-    ['Indicados sem preço', fmtI.format(semPreco), semPreco ? 'preço de compra zerado no cadastro' : 'todos com preço'],
+    ['Controlados no pedido', fmtI.format(ctrl), 'portaria preenchida'],
+    ['Sem preço no pedido', fmtI.format(semPreco), semPreco ? 'preço de compra zerado no cadastro' : 'todos com preço'],
   ].map(([a, b, c]) => `<div class="kpi"><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join('');
 }
 
@@ -269,7 +301,7 @@ function filtrar() {
   const ck = $('fCobTipo').value, cMin = parseFloat($('fCobMin').value), cMax = parseFloat($('fCobMax').value);
   const temCob = !isNaN(cMin) || !isNaN(cMax);
   filtrados = prods.filter(p =>
-    (ind === 'todos' || (ind === 'comprar') === p.comprar) &&
+    (ind === 'todos' || (ind === 'comprar' ? p.comprar || p.ajustado : !p.comprar && !p.ajustado)) &&
     (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
     (!temCob || (p[ck] !== null && (isNaN(cMin) || p[ck] >= cMin) && (isNaN(cMax) || p[ck] <= cMax))) &&
     (!q || String(p.cdpro).includes(q) || p.descr.toLowerCase().includes(q)));
@@ -291,7 +323,7 @@ const cob = (v, lim) => v === null ? '<span class="chip">sem consumo</span>'
   : `<span class="chip ${v <= lim ? 'err' : v <= lim * 2 ? 'warn' : 'ok'}">${fmtI.format(v)} d</span>`;
 function tabela() {
   kpis();
-  const linhas = filtrados.slice(0, limite).map(p => `<tr class="${p.comprar ? 'compra' : ''}">
+  const linhas = filtrados.slice(0, limite).map(p => `<tr data-cd="${p.cdpro}" class="${p.qtdF > 0 ? 'compra' : ''}${p.ajustado ? ' ajust' : ''}">
     <td>${p.cdpro}</td>
     <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
     <td class="r">${p.lista}</td>
@@ -299,7 +331,8 @@ function tabela() {
     <td class="r">${fmtN.format(p.e1)}</td><td class="r">${fmtN.format(p.e2)}</td>
     <td class="r">${fmtM(p.media)} ${esc(p.unida)}</td>
     <td class="r">${cob(p.dg, P.cobGeral)}</td><td class="r">${cob(p.d2, P.cobF2)}</td>
-    <td class="r"><b>${p.qtd ? fmtI.format(p.qtd) : '–'}</b></td>
+    <td class="r"><div class="qed"><button data-acao="-" aria-label="Baixar ${fmtI.format(p.passo)}" title="−${fmtI.format(p.passo)}">−</button><input data-acao="v" inputmode="numeric" value="${p.qtdF}" aria-label="Quantidade de ${esc(p.descr)}"><button data-acao="+" aria-label="Subir ${fmtI.format(p.passo)}" title="+${fmtI.format(p.passo)}">+</button></div>
+      <div class="qsug">${p.ajustado ? `sugerido ${fmtI.format(p.qtd)} · <button data-acao="r">desfazer</button>` : `passo ${fmtI.format(p.passo)}`}</div></td>
     <td class="r">${p.prcomn ? fmtR.format(p.prcomn) : '<span class="chip warn">sem preço</span>'}</td>
     <td class="r">${p.total ? fmtR.format(p.total) : '–'}</td>
     ${calor(p)}</tr>`).join('');
@@ -309,6 +342,9 @@ function tabela() {
   const cobTxt = cMin || cMax ? ` · ${$('fCobTipo').value === 'd2' ? 'cobertura F2' : 'cobertura geral'} ${cMin && cMax ? `de ${cMin} a ${cMax}` : cMin ? `a partir de ${cMin}` : `até ${cMax}`} dias (sem consumo fica de fora)` : '';
   $('conta').textContent = `${fmtI.format(filtrados.length)} produtos · total ${fmtR.format(soma)}${cobTxt}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
   $('mais').hidden = filtrados.length <= limite;
+  const nAj = Object.keys(AJ).length;
+  $('desfazer').hidden = !nAj; $('desfazer').dataset.conf = '';
+  $('desfazer').textContent = `Desfazer ${fmtI.format(nAj)} ${nAj === 1 ? 'ajuste' : 'ajustes'}`;
   const nPareto = filtrados.filter(p => p.total && p.acum - p.impacto < 0.8).length;
   const nValor = filtrados.filter(p => p.total).length;
   $('pareto').textContent = nValor ? `${fmtI.format(nPareto)} de ${fmtI.format(nValor)} itens fazem 80% do valor (marcados com 80%)` : '';
@@ -353,6 +389,27 @@ $('atalhos').addEventListener('click', e => {
   limite = 200; filtrar(); tabela();
 });
 $('mais').addEventListener('click', () => { limite += 200; tabela(); });
+$('linhas').addEventListener('click', e => {
+  const b = e.target.closest('button[data-acao]'); if (!b) return;
+  const cd = +b.closest('tr').dataset.cd, p = prods.find(x => x.cdpro === cd), a = b.dataset.acao;
+  if (a === 'r') return ajustar(cd, p.qtd);
+  const q = p.qtdF, s = p.passo;   // fora do múltiplo, o primeiro clique encaixa no múltiplo
+  ajustar(cd, a === '+' ? Math.floor(q / s) * s + s : Math.max(0, Math.ceil(q / s) * s - s));
+  document.querySelector(`tr[data-cd="${cd}"] button[data-acao="${a}"]`)?.focus();
+});
+$('linhas').addEventListener('change', e => {
+  const i = e.target.closest('input[data-acao="v"]'); if (!i) return;
+  const v = parseFloat(i.value.replace(/\./g, '').replace(',', '.'));
+  const cd = +i.closest('tr').dataset.cd;
+  if (isNaN(v)) { i.value = prods.find(x => x.cdpro === cd).qtdF; return; }
+  ajustar(cd, v);
+});
+$('linhas').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input[data-acao="v"]')) e.target.blur(); });
+$('desfazer').addEventListener('click', () => {
+  const b = $('desfazer');
+  if (!b.dataset.conf) { b.dataset.conf = '1'; b.textContent = 'Confirmar: voltar tudo para a sugestão'; setTimeout(() => tabela(), 4000); return; }
+  AJ = {}; salvarAJ(); aplicarAjustes(); filtrar(); tabela(); curvas();
+});
 $('tblListas').addEventListener('click', e => {
   const tr = e.target.closest('tr[data-lista]'); if (!tr) return;
   $('fLista').value = tr.dataset.lista; $('fIndica').value = 'todos'; abrir('lista'); filtrar(); tabela();
@@ -370,9 +427,9 @@ $('padrao').addEventListener('click', () => { P = {...PADRAO}; try { localStorag
 
 // copiar (cola direto no Excel)
 $('copiar').addEventListener('click', async () => {
-  const cab = ['Código','Descrição','Lista','Curva fin.','Curva fís.','Curva freq.','Estoque F1','Estoque F2','Consumo/dia','Cobertura geral','Cobertura F2','Qtd sugerida','Preço compra','Total','Impacto no pedido (%)'];
+  const cab = ['Código','Descrição','Lista','Curva fin.','Curva fís.','Curva freq.','Estoque F1','Estoque F2','Consumo/dia','Cobertura geral','Cobertura F2','Qtd sugerida','Qtd pedido','Preço compra','Total','Impacto no pedido (%)'];
   const n = v => v === null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
-  const txt = [cab.join('\t'), ...filtrados.map(p => [p.cdpro, p.descr, p.lista, 'CBA'[p.nf - 1], 'CBA'[p.nfi - 1], 'CBA'[p.nq - 1], n(p.e1), n(p.e2), n(p.media), n(p.dg), n(p.d2), p.qtd, n(p.prcomn), n(p.total), p.total ? n(p.impacto * 100) : ''].join('\t'))].join('\n');
+  const txt = [cab.join('\t'), ...filtrados.map(p => [p.cdpro, p.descr, p.lista, 'CBA'[p.nf - 1], 'CBA'[p.nfi - 1], 'CBA'[p.nq - 1], n(p.e1), n(p.e2), n(p.media), n(p.dg), n(p.d2), p.qtd, p.qtdF, n(p.prcomn), n(p.total), p.total ? n(p.impacto * 100) : ''].join('\t'))].join('\n');
   try { await navigator.clipboard.writeText(txt); $('msgCopia').textContent = `${fmtI.format(filtrados.length)} linhas copiadas. Cole no Excel.`; }
   catch (e) { $('msgCopia').textContent = 'O navegador bloqueou a cópia. Tente pelo app no computador.'; }
 });
