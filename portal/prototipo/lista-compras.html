@@ -212,7 +212,7 @@ button.perigo{color:var(--err)}
         <p class="mut" id="conta" style="font-size:13px"></p>
         <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
       </div>
-      <div class="row"><button class="mini" id="aplicarCiclo" hidden></button><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
+      <div class="row"><select id="cicloDestino" aria-label="Ciclo que recebe os itens marcados" style="width:auto; font-size:12px; padding:4px 6px" hidden></select><button class="mini" id="aplicarCiclo" hidden></button><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
     <div class="tw" id="twForn"><table class="tbl" id="tblForn"><thead><tr>
       <th>Descrição</th><th class="r">Quantidade</th><th class="r" title="Menor quantidade que você vende deste item">Qtd. mínima</th>
@@ -264,12 +264,13 @@ button.perigo{color:var(--err)}
 
   <section id="sec-ciclo" class="card" hidden>
     <div class="ciclo-top">
-      <h2 id="cicloTitulo"></h2>
+      <div class="row"><h2 id="cicloTitulo"></h2><select id="cicloVer" aria-label="Ver ciclo" style="width:auto"></select></div>
       <div class="row" id="cicloAcoes"></div>
     </div>
     <div class="datas" id="cicloDatas"></div>
     <div class="mini-kpis" id="cicloKpis"></div>
     <div class="apos" id="cicloApos" hidden></div>
+    <div class="apos" id="cicloRet" hidden style="background:var(--errbg)"></div>
     <div class="tw" id="twCiclo"><table class="tbl" id="tblCiclo"><thead><tr>
       <th>Cód.</th><th>Descrição</th><th>Lista</th><th class="r">Quantidade</th><th class="r">Preço compra</th><th class="r">Total</th><th>Fornecedor habitual</th><th>Entrou em</th><th></th>
     </tr></thead><tbody id="linhasCiclo"></tbody></table></div>
@@ -325,7 +326,7 @@ button.perigo{color:var(--err)}
         <li><b>Indicação</b>: Listas 3–5 compram com DiasConsumo (F1+F2) até 45 (Lista 5 só se teve consumo). Listas 1–2 compram com DiasConsumo (F2) até 30; se o produto for controlado, o DiasConsumo (F1+F2) também precisa estar abaixo de 45.</li>
         <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
         <li><b>Quantidade</b> = Consumo30D, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
-        <li><b>Ciclo de compras</b>: o comprador filtra a lista, marca os itens (o quadradinho do cabeçalho marca todos do filtro), desmarca o que não deve entrar e clica em "Aplicar ao ciclo". Repete com outros filtros. Ao lançar, o ciclo abre a cotação aos fornecedores; ainda aceita itens, que ficam marcados como adicionados após a abertura e geram e-mail aos fornecedores com acesso. Ao travar, não entra mais nada.</li>
+        <li><b>Ciclo de compras</b>: o comprador filtra a lista, marca os itens (o quadradinho do cabeçalho marca todos do filtro), desmarca o que não deve entrar e clica em "Aplicar ao ciclo". Repete com outros filtros. Ao lançar, o ciclo abre a cotação e envia convite por e-mail a todo fornecedor com acesso liberado (os fornecedores habituais sem acesso ficam registrados como não enviados); ainda aceita itens, que ficam marcados como adicionados após a abertura e geram e-mail aos fornecedores com acesso. Desmarcar um item do ciclo tira o item: em montagem ele só sai; com o ciclo aberto fica inativo (retirado), some da cotação e os fornecedores que cotam o item recebem aviso. Podem existir vários ciclos ao mesmo tempo, mas cada item fica ativo em um ciclo só. Ao travar, não entra nem sai mais nada.</li>
         <li><b>Cotação do fornecedor</b>: ele informa o preço por unidade e a quantidade mínima. Depois do primeiro preço, só pode reduzir (−5%, −10% ou um valor menor digitado). Enquanto não reduz, vê se tem o menor preço; depois da redução, o resultado fica oculto até o fechamento. Total = preço × a maior entre a quantidade pedida e a mínima.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
@@ -361,9 +362,16 @@ const salvarLIB = () => { try { localStorage.setItem('compras.liberados', JSON.s
 let CICLOS = [];
 try { CICLOS = JSON.parse(localStorage.getItem('compras.ciclos') || '[]') || []; } catch (e) {}
 const salvarCICLOS = () => { try { localStorage.setItem('compras.ciclos', JSON.stringify(CICLOS)); } catch (e) {} };
-const cicloAtual = () => CICLOS.find(c => c.status !== 'travado') || null;   // em montagem ou aberto
-const cicloAberto = () => CICLOS.find(c => c.status === 'aberto') || null;
+// vários ciclos podem estar em montagem ou abertos ao mesmo tempo; um item só fica ativo em um deles
+const ativo = (c, cd) => !!c?.itens[cd] && !c.itens[cd].retirado;
+const ativos = c => Object.keys(c.itens).filter(cd => !c.itens[cd].retirado);
+const vivos = () => CICLOS.filter(c => c.status !== 'travado');
+const cicloDoItem = cd => vivos().find(c => ativo(c, cd)) || null;
+const abertoDoItem = cd => CICLOS.find(c => c.status === 'aberto' && ativo(c, cd)) || null;
 const proximoId = () => (CICLOS.reduce((m, c) => Math.max(m, c.id), 0) || 0) + 1;
+let destinoId = null, verId = null;
+try { destinoId = JSON.parse(localStorage.getItem('compras.cicloDestino') || 'null'); } catch (e) {}
+const destino = () => vivos().find(c => c.id === destinoId) || null;   // null = abrir um ciclo novo
 const SEL = new Set();   // itens marcados na lista para entrar no ciclo
 const fmtD = iso => iso ? new Date(iso).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '–';
 const NOME_ST = {montagem:'em montagem', aberto:'aberto para cotação', travado:'travado'};
@@ -476,7 +484,7 @@ function kpis() {
     ['Listas 1 e 2', fmtI.format(l12.length), fmtR.format(l12.reduce((s, p) => s + p.total, 0))],
     ['Controlados', fmtI.format(ctrl), ''],
     ['Sem preço', fmtI.format(semPreco), ''],
-    ...(cicloAtual() ? [[`Ciclo ${cicloAtual().id}`, fmtI.format(Object.keys(cicloAtual().itens).length), NOME_ST[cicloAtual().status]]] : []),
+    ...vivos().map(cl => [`Ciclo ${cl.id}`, fmtI.format(ativos(cl).length), NOME_ST[cl.status]]),
   ].map(([a, b, c]) => `<div class="kpi"><small>${a}</small><b>${b}</b>${c ? `<span>${esc(c)}</span>` : ''}</div>`).join('');
 }
 
@@ -493,7 +501,7 @@ function filtrar() {
   const ck = $('fCobTipo').value, cMin = parseFloat($('fCobMin').value), cMax = parseFloat($('fCobMax').value);
   const temCob = !isNaN(cMin) || !isNaN(cMax);
   filtrados = prods.filter(p =>
-    (PERM.forn ? !!cicloAberto()?.itens[p.cdpro] && ($('fornEscopo').value === 'todos' || p.cdfnr === fornSel) :
+    (PERM.forn ? !!abertoDoItem(p.cdpro) && ($('fornEscopo').value === 'todos' || p.cdfnr === fornSel) :
       (ind === 'todos' || (ind === 'comprar' ? p.comprar || p.ajustado : !p.comprar && !p.ajustado)) && (!fo || p.cdfnr === fo)) &&
     (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
     (!temCob || (p[ck] !== null && (isNaN(cMin) || p[ck] >= cMin) && (isNaN(cMax) || p[ck] <= cMax))) &&
@@ -539,7 +547,7 @@ function linhasFornecedor() {
     const c = cotDe(p.cdpro), un = esc(p.unida);
     const minAcima = c.min && c.min > p.qtdF;
     return `<tr data-cd="${p.cdpro}">
-      <td class="desc">${esc(p.descr)}${p.cdfnr === fornSel ? ' <span class="chip" title="Último lote deste item veio deste fornecedor">habitual</span>' : ''}${cicloAberto()?.itens[p.cdpro]?.apos ? ` <span class="chip warn" title="Incluído depois da abertura, em ${fmtD(cicloAberto().itens[p.cdpro].em)}">novo na cotação</span>` : ''}</td>
+      <td class="desc">${esc(p.descr)}${p.cdfnr === fornSel ? ' <span class="chip" title="Último lote deste item veio deste fornecedor">habitual</span>' : ''}${(cl => cl ? ` <span class="chip">ciclo ${cl.id}</span>${cl.itens[p.cdpro].apos ? ` <span class="chip warn" title="Incluído depois da abertura, em ${fmtD(cl.itens[p.cdpro].em)}">novo na cotação</span>` : ''}` : '')(abertoDoItem(p.cdpro))}</td>
       <td class="r"><b>${fmtI.format(p.qtdF)}</b> ${un}</td>
       <td class="r"><div class="cot"><input class="min" data-c="min" inputmode="decimal" value="${c.min ?? ''}" placeholder="–" aria-label="Quantidade mínima de ${esc(p.descr)}"> ${un}</div>
         ${minAcima ? '<div class="qsug">acima do pedido: o total usa a mínima</div>' : ''}</td>
@@ -548,7 +556,7 @@ function linhasFornecedor() {
         ${c.lances > 1 ? `<div class="qsug">${c.lances} lances</div>` : ''}</td>
       <td class="r">${c.preco != null ? fmtR.format(totalCot(p)) : '–'}</td>
       <td>${STATUS_COT[statusCot(p)]}</td></tr>`;
-  }).join('') || `<tr><td colspan="6" class="mut">${cicloAberto() ? 'Nenhum item desta cotação para este fornecedor.' : 'Nenhuma cotação aberta no momento.'}</td></tr>`;
+  }).join('') || `<tr><td colspan="6" class="mut">${CICLOS.some(c => c.status === 'aberto') ? 'Nenhum item das cotações abertas para este fornecedor.' : 'Nenhuma cotação aberta no momento.'}</td></tr>`;
 }
 function darPreco(cd, v) {
   const c = cotDe(cd);
@@ -568,9 +576,9 @@ function tabela() {
     return;
   }
   const linhas = filtrados.slice(0, limite).map(p => `<tr data-cd="${p.cdpro}" class="${p.qtdF > 0 ? 'compra' : ''}${p.ajustado ? ' ajust' : ''}${p.lista <= 3 ? ' l' + p.lista : ''}">
-    <td>${!PERM.ajusta ? p.cdpro : cicloAtual()?.itens[p.cdpro]
-      ? `<span class="sel" title="Já está no ciclo ${cicloAtual().id}"><span class="nociclo">ciclo</span>${p.cdpro}</span>`
-      : `<label class="sel"><input type="checkbox" data-sel="${p.cdpro}" ${SEL.has(p.cdpro) ? 'checked' : ''} aria-label="Marcar ${esc(p.descr)}">${p.cdpro}</label>`}</td>
+    <td>${!PERM.ajusta ? p.cdpro : (cl => cl
+      ? `<label class="sel" title="No ciclo ${cl.id} (${NOME_ST[cl.status]}). Desmarque para tirar do ciclo."><input type="checkbox" data-noCiclo="${p.cdpro}" checked aria-label="Tirar ${esc(p.descr)} do ciclo ${cl.id}">${p.cdpro}<span class="nociclo">ciclo ${cl.id}</span></label>`
+      : `<label class="sel"><input type="checkbox" data-sel="${p.cdpro}" ${SEL.has(p.cdpro) ? 'checked' : ''} aria-label="Marcar ${esc(p.descr)}">${p.cdpro}</label>`)(cicloDoItem(p.cdpro))}</td>
     <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
     <td>${importancia(p.lista)}</td>
     <td><span class="curvas">${[p.nf, p.nfi, p.nq].map(n => `<i class="c${'CBA'[n - 1]}">${'CBA'[n - 1]}</i>`).join('')}</span></td>
@@ -615,10 +623,12 @@ function curvas() {
 }
 
 // marcação na lista
-const marcaveis = () => filtrados.filter(p => !cicloAtual()?.itens[p.cdpro]);
+const marcaveis = () => filtrados.filter(p => !cicloDoItem(p.cdpro));
 function botaoCiclo() {
-  const b = $('aplicarCiclo'), n = SEL.size, c = cicloAtual();
-  b.hidden = !PERM.ajusta || !n;
+  const b = $('aplicarCiclo'), n = SEL.size, c = destino(), sd = $('cicloDestino');
+  sd.innerHTML = vivos().map(cl => `<option value="${cl.id}">Ciclo ${cl.id} · ${NOME_ST[cl.status]}</option>`).join('') + `<option value="novo">Novo ciclo (${proximoId()})</option>`;
+  sd.value = c ? String(c.id) : 'novo';
+  sd.hidden = b.hidden = !PERM.ajusta || !n;
   b.textContent = c?.status === 'aberto'
     ? `Incluir ${fmtI.format(n)} ${n === 1 ? 'item' : 'itens'} no ciclo ${c.id} (aberto)`
     : `Aplicar ${fmtI.format(n)} ${n === 1 ? 'item' : 'itens'} ao ciclo ${c ? c.id : proximoId()}`;
@@ -628,77 +638,128 @@ function botaoCiclo() {
   $('selTodos').disabled = !m.length;
   $('selTodos').hidden = !PERM.ajusta;
 }
+function novoCiclo() {
+  const c = {id: proximoId(), status: 'montagem', criado: new Date().toISOString(), itens: {}, emails: []};
+  CICLOS.push(c); return c;
+}
 function aplicarAoCiclo() {
-  let c = cicloAtual();
-  if (!c) { c = {id: proximoId(), status: 'montagem', criado: new Date().toISOString(), itens: {}, emails: []}; CICLOS.push(c); }
+  const c = destino() || novoCiclo();
+  destinoId = c.id; try { localStorage.setItem('compras.cicloDestino', JSON.stringify(destinoId)); } catch (e) {}
   const agora = new Date().toISOString(), novos = [];
-  SEL.forEach(cd => { if (!c.itens[cd]) { c.itens[cd] = {em: agora, apos: c.status === 'aberto'}; novos.push(cd); } });
-  if (c.status === 'aberto') avisarFornecedores(c, novos, agora);
+  SEL.forEach(cd => {
+    if (cicloDoItem(cd)) return;   // já está ativo em outro ciclo
+    c.itens[cd] = {em: agora, apos: c.status === 'aberto'}; novos.push(cd);
+  });
+  if (c.status === 'aberto' && novos.length) avisar(c, 'inclusao', novos, agora);
   SEL.clear(); salvarCICLOS();
   $('msgCopia').textContent = `${fmtI.format(novos.length)} ${novos.length === 1 ? 'item entrou' : 'itens entraram'} no ciclo ${c.id}${c.status === 'aberto' ? ' depois da abertura; aviso por e-mail registrado para os fornecedores' : ''}.`;
   tabela();
 }
-// item incluído com o ciclo aberto: um e-mail por fornecedor com acesso liberado (na simulação, só fica registrado)
-function avisarFornecedores(c, cds, em) {
+// desmarcar um item do ciclo: em montagem sai sem rastro; aberto fica inativo (retirado) e os fornecedores são avisados
+function retirar(cd) {
+  const c = cicloDoItem(cd); if (!c) return;
+  if (c.status === 'montagem') delete c.itens[cd];
+  else if (c.status === 'aberto') { c.itens[cd].retirado = new Date().toISOString(); avisar(c, 'retirada', [cd], c.itens[cd].retirado); }
+  salvarCICLOS();
+  $('msgCopia').textContent = `Item ${cd} saiu do ciclo ${c.id}${c.status === 'aberto' ? '; aviso de retirada registrado para os fornecedores' : ''}.`;
+}
+// e-mails aos fornecedores (na simulação, só registrados). inclusão: fornecedor habitual do item;
+// retirada: habitual e quem já cotou o item. Sai para os e-mails com acesso liberado do CNPJ.
+function avisar(c, tipo, cds, em) {
   const porForn = {};
-  cds.forEach(cd => { const p = prods.find(x => x.cdpro === +cd); (porForn[p.cdfnr || ''] ||= []).push(p); });
+  cds.forEach(cd => {
+    const p = prods.find(x => x.cdpro === +cd); if (!p) return;
+    const alvo = new Set([p.cdfnr || '']);
+    if (tipo === 'retirada') Object.keys(COT).forEach(cn => { if (COT[cn][cd]?.preco != null) alvo.add(cn); });
+    alvo.forEach(cn => (porForn[cn] ||= []).push(p));
+  });
   Object.entries(porForn).forEach(([cn, ps]) => {
-    const para = Object.keys(LIB).filter(e => LIB[e].cnpj === cn);
-    c.emails.push({em, cnpj: cn, para, itens: ps.map(p => p.cdpro),
-      assunto: `Ciclo ${c.id}: ${ps.length === 1 ? 'item adicionado' : ps.length + ' itens adicionados'} à cotação da Medicinal`});
+    const para = Object.keys(LIB).filter(e => LIB[e].cnpj === cn), n = ps.length;
+    const nomes = ps.slice(0, 3).map(p => p.descr).join(', ') + (n > 3 ? ` e mais ${n - 3}` : '');
+    c.emails.push({tipo, em, cnpj: cn, para, itens: ps.map(p => p.cdpro),
+      assunto: tipo === 'inclusao' ? `Ciclo ${c.id}: ${n === 1 ? 'item adicionado' : n + ' itens adicionados'} à cotação da Medicinal (${nomes})`
+                                   : `Ciclo ${c.id}: ${n === 1 ? 'item retirado' : n + ' itens retirados'} da cotação da Medicinal (${nomes})`});
+  });
+}
+// ao lançar: convite a todo fornecedor com acesso liberado e registro dos fornecedores habituais do ciclo que ainda não têm acesso
+function convidarFornecedores(c, em) {
+  const habituais = {};
+  ativos(c).forEach(cd => { const p = prods.find(x => x.cdpro === +cd); if (p?.cdfnr) (habituais[p.cdfnr] ||= []).push(p.cdpro); });
+  const comAcesso = [...new Set(Object.values(LIB).map(l => l.cnpj))];
+  [...new Set([...comAcesso, ...Object.keys(habituais)])].forEach(cn => {
+    const para = Object.keys(LIB).filter(e => LIB[e].cnpj === cn), n = (habituais[cn] || []).length;
+    c.emails.push({tipo: 'convite', em, cnpj: cn, para, itens: habituais[cn] || [],
+      assunto: `Medicinal: cotação do ciclo ${c.id} aberta${n ? ` (${n} ${n === 1 ? 'item' : 'itens'} que você costuma fornecer)` : ''}`});
   });
 }
 let confirmaCiclo = '';
+const TIPO_EMAIL = {convite: '<span class="chip">convite</span>', inclusao: '<span class="chip warn">inclusão</span>', retirada: '<span class="chip err">retirada</span>'};
 function ciclo() {
-  const c = cicloAtual() || CICLOS[CICLOS.length - 1];
+  const sv = $('cicloVer');
+  sv.innerHTML = [...CICLOS].reverse().map(c => `<option value="${c.id}">Ciclo ${c.id} · ${NOME_ST[c.status]}</option>`).join('');
+  sv.hidden = CICLOS.length < 2;
+  const c = CICLOS.find(x => x.id === verId) || destino() || vivos()[0] || CICLOS[CICLOS.length - 1];
   const acoes = $('cicloAcoes');
   if (!c) {
     $('cicloTitulo').innerHTML = `Ciclo ${proximoId()} <span class="st montagem">ainda vazio</span>`;
-    $('cicloDatas').textContent = ''; $('cicloKpis').innerHTML = ''; $('cicloApos').hidden = true; $('cicloEmails').hidden = true;
+    $('cicloDatas').textContent = ''; $('cicloKpis').innerHTML = ''; $('cicloApos').hidden = $('cicloRet').hidden = $('cicloEmails').hidden = true;
     acoes.innerHTML = '';
     $('linhasCiclo').innerHTML = '<tr><td colspan="9" class="mut">Na Lista de compras, filtre os itens, marque (o quadradinho do cabeçalho marca todos do filtro), desmarque o que não deve entrar e clique em "Aplicar ao ciclo". Repita com outros filtros até montar o ciclo.</td></tr>';
     $('cicloHist').textContent = '';
     return;
   }
-  const ps = Object.keys(c.itens).map(cd => prods.find(p => p.cdpro === +cd)).filter(Boolean);
+  sv.value = String(c.id);
+  const todos = Object.keys(c.itens).map(cd => prods.find(p => p.cdpro === +cd)).filter(Boolean);
+  const ps = todos.filter(p => !c.itens[p.cdpro].retirado), ret = todos.filter(p => c.itens[p.cdpro].retirado);
   const q = p => c.status === 'travado' ? c.itens[p.cdpro].qtd : p.qtdF;
   const total = ps.reduce((s, p) => s + p.prcomn * q(p), 0);
   const apos = ps.filter(p => c.itens[p.cdpro].apos);
+  const enviados = tp => c.emails.filter(m => m.tipo === tp && m.para.length).length;
   $('cicloTitulo').innerHTML = `Ciclo ${c.id} <span class="st ${c.status}">${NOME_ST[c.status]}</span>`;
   $('cicloDatas').innerHTML = `<span>Criado ${fmtD(c.criado)}</span><span>Aberto ${fmtD(c.aberto)}</span><span>Travado ${fmtD(c.travado)}</span>`;
   $('cicloKpis').innerHTML = [['Itens', ps.length], ['Valor', fmtR.format(total)], ['Fornecedores', new Set(ps.map(p => p.cdfnr || '?')).size],
-    ['Incluídos após a abertura', apos.length], ['E-mails de inclusão', c.emails.length]]
+    ['Incluídos após a abertura', apos.length], ['Retirados após a abertura', ret.length],
+    ['Convites', enviados('convite')], ['Avisos de inclusão', enviados('inclusao')], ['Avisos de retirada', enviados('retirada')]]
     .map(([a, b]) => `<div class="kpi"><small>${a}</small><b>${typeof b === 'number' ? fmtI.format(b) : b}</b></div>`).join('');
   const conf = (acao, txt, txtConf) => `<button class="${acao === 'travar' ? 'sec perigo' : ''}" data-ciclo="${acao}">${confirmaCiclo === acao ? txtConf : txt}</button>`;
-  acoes.innerHTML = c.status === 'montagem' ? conf('lancar', `Lançar ciclo ${c.id}`, 'Confirmar: abrir a cotação aos fornecedores')
+  acoes.innerHTML = c.status === 'montagem' ? conf('lancar', `Lançar ciclo ${c.id}`, 'Confirmar: abrir a cotação e convidar os fornecedores')
     : c.status === 'aberto' ? conf('travar', `Travar ciclo ${c.id}`, 'Confirmar: travar (não aceita mais itens)') : '';
   $('cicloApos').hidden = !apos.length;
   $('cicloApos').innerHTML = `<h3>Adicionados após a abertura do ciclo (${apos.length})</h3><ul>${apos.map(p => `<li><b>${esc(p.descr)}</b> (${p.cdpro}) · ${fmtI.format(q(p))} ${esc(p.unida)} · entrou em ${fmtD(c.itens[p.cdpro].em)}</li>`).join('')}</ul>`;
+  $('cicloRet').hidden = !ret.length;
+  $('cicloRet').innerHTML = `<h3>Retirados após a abertura (inativos) (${ret.length})</h3><ul>${ret.map(p => `<li><b>${esc(p.descr)}</b> (${p.cdpro}) · retirado em ${fmtD(c.itens[p.cdpro].retirado)}</li>`).join('')}</ul>`;
   $('cicloEmails').hidden = !c.emails.length;
-  $('cicloEmails').innerHTML = `<h3>E-mails aos fornecedores sobre itens incluídos <span class="mut" style="font-weight:400">(na simulação ficam só registrados; o envio entra com o n8n)</span></h3><ul>${c.emails.map(m => `<li>${fmtD(m.em)} · <b>${esc(fornNome(m.cnpj))}</b> · "${esc(m.assunto)}" · ${m.para.length ? 'para ' + m.para.map(esc).join(', ') : '<span class="chip warn">não enviado: fornecedor sem acesso liberado</span>'}</li>`).join('')}</ul>`;
+  $('cicloEmails').innerHTML = `<h3>E-mails aos fornecedores <span class="mut" style="font-weight:400">(na simulação ficam só registrados; o envio entra com o n8n)</span></h3><ul>${[...c.emails].sort((a, b) => b.em.localeCompare(a.em) || (b.para.length > 0) - (a.para.length > 0)).map(m => `<li>${TIPO_EMAIL[m.tipo]} ${fmtD(m.em)} · <b>${esc(fornNome(m.cnpj))}</b> · "${esc(m.assunto)}" · ${m.para.length ? 'para ' + m.para.map(esc).join(', ') : '<span class="chip warn">não enviado: fornecedor sem acesso liberado</span>'}</li>`).join('')}</ul>`;
   $('linhasCiclo').innerHTML = ps.sort((a, b) => b.prcomn * q(b) - a.prcomn * q(a)).map(p => `<tr class="${p.lista <= 3 ? 'l' + p.lista : ''}">
     <td>${p.cdpro}</td><td class="desc">${esc(p.descr)}</td><td>${importancia(p.lista)}</td>
     <td class="r"><b>${fmtI.format(q(p))}</b> ${esc(p.unida)}</td><td class="r">${p.prcomn ? fmtR.format(p.prcomn) : '–'}</td>
     <td class="r">${fmtR.format(p.prcomn * q(p))}</td><td title="${esc(fornTitulo(p.cdfnr))}">${esc(p.forn)}</td>
     <td>${fmtD(c.itens[p.cdpro].em)}${c.itens[p.cdpro].apos ? ' <span class="chip warn">após abertura</span>' : ''}</td>
-    <td>${c.status === 'montagem' ? `<button class="sec mini" data-tirar="${p.cdpro}">tirar</button>` : ''}</td></tr>`).join('')
+    <td>${c.status !== 'travado' ? `<button class="sec mini" data-tirar="${p.cdpro}">${c.status === 'aberto' ? 'retirar' : 'tirar'}</button>` : ''}</td></tr>`).join('')
     || '<tr><td colspan="9" class="mut">Ciclo sem itens.</td></tr>';
-  const ant = CICLOS.filter(x => x !== c);
-  $('cicloHist').textContent = ant.length ? 'Ciclos anteriores: ' + ant.map(x => `ciclo ${x.id} (${NOME_ST[x.status]}, ${Object.keys(x.itens).length} itens)`).join(' · ') : '';
+  const outros = CICLOS.filter(x => x !== c);
+  $('cicloHist').textContent = outros.length ? 'Outros ciclos: ' + outros.map(x => `ciclo ${x.id} (${NOME_ST[x.status]}, ${ativos(x).length} itens)`).join(' · ') : '';
+  verId = c.id;
 }
+$('cicloVer').addEventListener('change', () => { verId = +$('cicloVer').value; confirmaCiclo = ''; ciclo(); });
+$('cicloDestino').addEventListener('change', () => {
+  const v = $('cicloDestino').value;
+  destinoId = v === 'novo' ? null : +v; try { localStorage.setItem('compras.cicloDestino', JSON.stringify(destinoId)); } catch (e) {}
+  botaoCiclo();
+});
 $('cicloAcoes').addEventListener('click', e => {
   const b = e.target.closest('button[data-ciclo]'); if (!b) return;
-  const c = cicloAtual(), a = b.dataset.ciclo;
+  const c = CICLOS.find(x => x.id === verId), a = b.dataset.ciclo; if (!c) return;
   if (confirmaCiclo !== a) { confirmaCiclo = a; ciclo(); setTimeout(() => { confirmaCiclo = ''; if (!$('sec-ciclo').hidden) ciclo(); }, 5000); return; }
   confirmaCiclo = '';
-  if (a === 'lancar') { c.status = 'aberto'; c.aberto = new Date().toISOString(); }
+  if (a === 'lancar') { c.status = 'aberto'; c.aberto = new Date().toISOString(); convidarFornecedores(c, c.aberto); }
   if (a === 'travar') { c.status = 'travado'; c.travado = new Date().toISOString();
-    Object.keys(c.itens).forEach(cd => { c.itens[cd].qtd = prods.find(p => p.cdpro === +cd)?.qtdF ?? 0; }); }
+    ativos(c).forEach(cd => { c.itens[cd].qtd = prods.find(p => p.cdpro === +cd)?.qtdF ?? 0; }); }
   salvarCICLOS(); ciclo(); kpis();
 });
 $('linhasCiclo').addEventListener('click', e => {
   const b = e.target.closest('button[data-tirar]'); if (!b) return;
-  delete cicloAtual().itens[b.dataset.tirar]; salvarCICLOS(); ciclo(); kpis();
+  retirar(b.dataset.tirar); ciclo(); kpis();
 });
 $('aplicarCiclo').addEventListener('click', aplicarAoCiclo);
 $('selTodos').addEventListener('click', e => e.stopPropagation());
@@ -708,9 +769,10 @@ $('selTodos').addEventListener('change', () => {
   tabela();
 });
 $('linhas').addEventListener('change', e => {
-  const i = e.target.closest('input[data-sel]'); if (!i) return;
-  if (i.checked) SEL.add(+i.dataset.sel); else SEL.delete(+i.dataset.sel);
-  botaoCiclo();
+  const s = e.target.closest('input[data-sel]');
+  if (s) { if (s.checked) SEL.add(+s.dataset.sel); else SEL.delete(+s.dataset.sel); botaoCiclo(); return; }
+  const r = e.target.closest('input[data-nociclo]');
+  if (r && !r.checked) { retirar(r.dataset.nociclo); tabela(); }
 });
 
 function cadastro() {
