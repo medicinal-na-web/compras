@@ -90,7 +90,7 @@ button.perigo{color:var(--err)}
 .perfil select{width:auto; font-weight:600; padding:5px 8px}
 .aviso{background:var(--soft); border-radius:10px; padding:8px 12px; font-size:13px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center}
 .aviso select{width:auto}
-/* colunas por perfil: 3-9 = dados internos (lista, curvas, estoque, consumo, cobertura); 11-14 = valores e fornecedor */
+/* colunas por perfil: 3-9 = dados internos (lista, curvas, estoque, Consumo30D, DiasConsumo); 11-14 = valores e fornecedor */
 .sem-int .tbl tr > :nth-child(n+3):nth-child(-n+9){display:none}
 .sem-val .tbl tr > :nth-child(n+11){display:none}
 .so-forn .filtros, .so-forn .cobfiltro, .sem-val .legenda, .sem-val .val{display:none}
@@ -158,10 +158,10 @@ button.perigo{color:var(--err)}
       <div><label for="fForn">Fornecedor (último lote)</label><select id="fForn"><option value="">Todos</option></select></div>
     </div>
     <div class="cobfiltro">
-      <div class="ctipo"><label for="fCobTipo">Dias de consumo suportados</label><select id="fCobTipo"><option value="dg" selected>Cobertura geral (F1 × peso + F2)</option><option value="d2">Cobertura da filial 2</option></select></div>
+      <div class="ctipo"><label for="fCobTipo">Filtrar por</label><select id="fCobTipo"><option value="dg" selected>DiasConsumo (F1+F2)</option><option value="d2">DiasConsumo (F2)</option></select></div>
       <div class="cdias"><label for="fCobMin">De (dias)</label><input id="fCobMin" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>
       <div class="cdias"><label for="fCobMax">Até (dias)</label><input id="fCobMax" type="number" min="0" step="1" inputmode="numeric" placeholder="sem limite"></div>
-      <div class="row" id="atalhos" aria-label="Atalhos de cobertura">
+      <div class="row" id="atalhos" aria-label="Atalhos de DiasConsumo">
         <button class="sec mini" data-ate="15">até 15 d</button><button class="sec mini" data-ate="30">até 30 d</button><button class="sec mini" data-ate="45">até 45 d</button><button class="sec mini" data-de="90">90 d ou mais</button><button class="sec mini" data-limpa="1">limpar</button>
       </div>
     </div>
@@ -176,12 +176,12 @@ button.perigo{color:var(--err)}
       <th data-k="cdpro">Cód.</th>
       <th data-k="descr">Descrição</th>
       <th data-k="lista" class="r">Lista</th>
-      <th data-k="nota" title="Financeiro · Físico · Frequência (90 dias)">Curvas F·Fí·Fr</th>
+      <th data-k="nota" title="Financeiro · Físico · Frequência (90 dias)">Curvas<br>(F-Fi-Fr)</th>
       <th data-k="e1" class="r">Estoque F1</th>
       <th data-k="e2" class="r">Estoque F2</th>
-      <th data-k="media" class="r">Consumo/dia</th>
-      <th data-k="dg" class="r">Cobertura geral</th>
-      <th data-k="d2" class="r">Cobertura F2</th>
+      <th data-k="media" class="r" title="30 × consumo por dia. Consumo por dia = (consumo de 30 dias + consumo de 90 dias) ÷ 120">Consumo30D</th>
+      <th data-k="dg" class="r" title="Dias que o estoque aguenta: (estoque F1 × 0,6 + estoque F2) ÷ consumo por dia">DiasConsumo<br>(F1+F2)</th>
+      <th data-k="d2" class="r" title="Dias que o estoque da filial 2 aguenta: estoque F2 ÷ consumo por dia">DiasConsumo<br>(F2)</th>
       <th data-k="qtdF" class="r" title="Sugestão do cálculo. Ajuste com − e + ou digitando.">Quantidade</th>
       <th data-k="prcomn" class="r">Preço compra</th>
       <th data-k="total" class="r" aria-sort="descending">Total</th>
@@ -206,10 +206,10 @@ button.perigo{color:var(--err)}
     <h2>Parâmetros da simulação</h2>
     <p class="mut">Mude os valores para ver o efeito na lista. As mudanças ficam só neste navegador. No portal, vão ficar gravadas na tabela de parâmetros com histórico.</p>
     <div class="params">
-      <div><label for="pCobGeral">Cobertura geral máxima (dias)</label><input id="pCobGeral" type="number" min="0" step="1"><p>Listas 3, 4 e 5 compram quando a cobertura geral fica até este valor. Listas 1 e 2 usam para controlados.</p></div>
-      <div><label for="pCobF2">Cobertura da filial 2 máxima (dias)</label><input id="pCobF2" type="number" min="0" step="1"><p>Listas 1 e 2. Era 45; foi reduzido para 30 em 15/12/2025, com a orientação de voltar para 45 assim que possível.</p></div>
-      <div><label for="pPeso">Peso do estoque da filial 1</label><input id="pPeso" type="number" min="0" max="1" step="0.05"><p>Cobertura geral = (estoque F1 × peso + estoque F2) ÷ consumo diário.</p></div>
-      <div><label for="pDias">Dias de compra</label><input id="pDias" type="number" min="1" step="1"><p>Quantidade = consumo diário × dias, arredondada para cima até a próxima embalagem. Ajustes manuais da quantidade continuam valendo quando você muda os parâmetros.</p></div>
+      <div><label for="pCobGeral">DiasConsumo (F1+F2) máximo</label><input id="pCobGeral" type="number" min="0" step="1"><p>Listas 3, 4 e 5 compram quando o DiasConsumo (F1+F2) fica até este valor. Listas 1 e 2 usam para controlados.</p></div>
+      <div><label for="pCobF2">DiasConsumo (F2) máximo</label><input id="pCobF2" type="number" min="0" step="1"><p>Listas 1 e 2. Era 45; foi reduzido para 30 em 15/12/2025, com a orientação de voltar para 45 assim que possível.</p></div>
+      <div><label for="pPeso">Peso do estoque da filial 1</label><input id="pPeso" type="number" min="0" max="1" step="0.05"><p>DiasConsumo (F1+F2) = (estoque F1 × peso + estoque F2) ÷ consumo por dia.</p></div>
+      <div><label for="pDias">Dias de compra</label><input id="pDias" type="number" min="1" step="1"><p>Quantidade = consumo por dia × dias, arredondada para cima até a próxima embalagem. Ajustes manuais da quantidade continuam valendo quando você muda os parâmetros.</p></div>
       <div><label for="pCorteA">Corte da curva A</label><input id="pCorteA" type="number" min="0" max="1" step="0.01"><p>Produtos que somam até esta fração do total acumulado.</p></div>
       <div><label for="pCorteB">Corte da curva B</label><input id="pCorteB" type="number" min="0" max="1" step="0.01"><p>Entre o corte A e este valor. O resto é curva C.</p></div>
     </div>
@@ -221,10 +221,10 @@ button.perigo{color:var(--err)}
     <p class="mut">Proposta para o portal. O login é por e-mail com código, como nos outros portais da casa. O administrador cadastra cada e-mail com um perfil; o fornecedor fica ligado ao CNPJ dele. Use "Ver como", no topo, para conferir o que cada perfil enxerga.</p>
     <div class="tw" style="max-height:none"><table class="perm">
       <tr><th>O que pode</th><th>Administrador</th><th>Comprador</th><th>Produção</th><th>Fornecedor</th></tr>
-      <tr><td>Ver a lista de compras com estoque, consumo, cobertura e curvas</td><td class="s">sim</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td></tr>
+      <tr><td>Ver a lista de compras com estoque, Consumo30D, DiasConsumo e curvas</td><td class="s">sim</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td></tr>
       <tr><td>Ver preço de compra, valor do pedido e impacto</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Ajustar quantidades do pedido</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
-      <tr><td>Alterar parâmetros (dias de cobertura, cortes das curvas, peso)</td><td class="s">sim</td><td class="n">só vê</td><td class="n">não</td><td class="n">não</td></tr>
+      <tr><td>Alterar parâmetros (limites de DiasConsumo, cortes das curvas, peso)</td><td class="s">sim</td><td class="n">só vê</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Ver o pedido do próprio CNPJ (código, descrição, unidade e quantidade)</td><td class="s">todos</td><td class="s">todos</td><td class="n">não</td><td class="s">só o seu</td></tr>
       <tr><td>Cadastrar e remover acessos</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td><td class="n">não</td></tr>
     </table></div>
@@ -238,11 +238,12 @@ button.perigo{color:var(--err)}
       <ol>
         <li><b>Curvas ABC</b> em três dimensões dos últimos 90 dias: custo consumido (financeiro), quantidade consumida (físico) e número de usos (frequência). Os produtos são ordenados pela participação; quem soma até 80% do total é A, até 95% é B, o resto é C.</li>
         <li><b>Lista</b> pela soma das notas: 8–9 → Lista 1; 6–7 → Lista 2; 5 → Lista 3; 4 → Lista 4; 3 (C/C/C) → Lista 5.</li>
-        <li><b>Consumo diário</b> = (consumo de 30 dias + consumo de 90 dias) ÷ 120. Os últimos 30 dias contam em dobro.</li>
-        <li><b>Cobertura</b>: geral = (estoque F1 × 0,6 + estoque F2) ÷ consumo diário; filial 2 = estoque F2 ÷ consumo diário.</li>
-        <li><b>Indicação</b>: Listas 3–5 compram com cobertura geral até 45 dias (Lista 5 só se teve consumo). Listas 1–2 compram com cobertura da filial 2 até 30 dias; se o produto for controlado, a cobertura geral também precisa estar abaixo de 45.</li>
+        <li><b>Consumo por dia</b> = (consumo de 30 dias + consumo de 90 dias) ÷ 120. Os últimos 30 dias contam em dobro.</li>
+        <li><b>Consumo30D</b> = 30 × consumo por dia.</li>
+        <li><b>DiasConsumo (F1+F2)</b> = (estoque F1 × 0,6 + estoque F2) ÷ consumo por dia. <b>DiasConsumo (F2)</b> = estoque F2 ÷ consumo por dia.</li>
+        <li><b>Indicação</b>: Listas 3–5 compram com DiasConsumo (F1+F2) até 45 (Lista 5 só se teve consumo). Listas 1–2 compram com DiasConsumo (F2) até 30; se o produto for controlado, o DiasConsumo (F1+F2) também precisa estar abaixo de 45.</li>
         <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
-        <li><b>Quantidade</b> = consumo diário × 30 dias, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
+        <li><b>Quantidade</b> = Consumo30D, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
     </div>
@@ -258,7 +259,7 @@ const PASSOS = [[25000, 5000], [2500, 500], [500, 50], [50, 10], [0, 1]];
 let AJ = {};   // ajustes manuais: cdpro -> quantidade (só neste navegador, por enquanto)
 try { AJ = JSON.parse(localStorage.getItem('compras.ajustes') || '{}') || {}; } catch (e) {}
 const salvarAJ = () => { try { localStorage.setItem('compras.ajustes', JSON.stringify(AJ)); } catch (e) {} };
-const LISTA_REGRA = {1:'Cobertura F2 ≤ limite F2 (controlado: e geral < limite geral)',2:'Cobertura F2 ≤ limite F2 (controlado: e geral < limite geral)',3:'Cobertura geral ≤ limite geral',4:'Cobertura geral ≤ limite geral',5:'Teve consumo e cobertura geral ≤ limite geral'};
+const LISTA_REGRA = {1:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',2:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',3:'DiasConsumo (F1+F2) ≤ 45',4:'DiasConsumo (F1+F2) ≤ 45',5:'Teve consumo e DiasConsumo (F1+F2) ≤ 45'};
 
 const prods = D.map(r => ({cdpro:r[0], descr:r[1], situa:r[2], unida:r[3], prcomn:r[4], ctrl:r[5], porta:r[6], e1:r[7], e2:r[8], f30:r[9], f90:r[10], c90:r[11], q90:r[12], cdfnr:r[13]}));
 const cnpj = c => c && c.length === 14 ? `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}` : (c || '–');
@@ -349,7 +350,7 @@ function kpis() {
   ] : !PERM.valores ? [
     ['Itens no pedido', fmtI.format(c.length), `na tela, de ${fmtI.format(prods.length)} produtos`],
     ['Listas 1 e 2', fmtI.format(l12.length), 'itens no pedido'],
-    ['Cobertura até 15 dias', fmtI.format(critico), 'cobertura geral, na tela'],
+    ['DiasConsumo (F1+F2) até 15', fmtI.format(critico), 'itens na tela'],
     ['Controlados no pedido', fmtI.format(ctrl), 'portaria preenchida'],
   ] : null;
   if (cards) { $('kpis').innerHTML = cards.map(([a, b, c]) => `<div class="kpi"><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join(''); return; }
@@ -404,7 +405,7 @@ function tabela() {
     <td class="r">${p.lista}</td>
     <td><span class="curvas">${[p.nf, p.nfi, p.nq].map(n => `<i class="c${'CBA'[n - 1]}">${'CBA'[n - 1]}</i>`).join('')}</span></td>
     <td class="r">${fmtN.format(p.e1)}</td><td class="r">${fmtN.format(p.e2)}</td>
-    <td class="r">${fmtM(p.media)} ${esc(p.unida)}</td>
+    <td class="r">${fmtM(p.media * 30)} ${esc(p.unida)}</td>
     <td class="r">${cob(p.dg, P.cobGeral)}</td><td class="r">${cob(p.d2, P.cobF2)}</td>
     <td class="r">${!PERM.ajusta ? (p.qtdF ? `<b>${fmtI.format(p.qtdF)}</b> ${esc(p.unida)}` : '–') : `<div class="qed"><button data-acao="-" aria-label="Baixar ${fmtI.format(p.passo)}" title="−${fmtI.format(p.passo)}">−</button><input data-acao="v" inputmode="numeric" value="${p.qtdF}" aria-label="Quantidade de ${esc(p.descr)}"><button data-acao="+" aria-label="Subir ${fmtI.format(p.passo)}" title="+${fmtI.format(p.passo)}">+</button></div>
       ${p.ajustado ? `<div class="qsug">sug. ${fmtI.format(p.qtd)} · <button data-acao="r">desfazer</button></div>` : ''}`}</td>
@@ -415,7 +416,7 @@ function tabela() {
   $('linhas').innerHTML = linhas || '<tr><td colspan="14" class="mut">Nenhum produto com esses filtros.</td></tr>';
   const soma = filtrados.reduce((s, p) => s + p.total, 0);
   const cMin = $('fCobMin').value, cMax = $('fCobMax').value;
-  const cobTxt = cMin || cMax ? ` · ${$('fCobTipo').value === 'd2' ? 'cobertura F2' : 'cobertura geral'} ${cMin && cMax ? `de ${cMin} a ${cMax}` : cMin ? `a partir de ${cMin}` : `até ${cMax}`} dias (sem consumo fica de fora)` : '';
+  const cobTxt = cMin || cMax ? ` · ${$('fCobTipo').value === 'd2' ? 'DiasConsumo (F2)' : 'DiasConsumo (F1+F2)'} ${cMin && cMax ? `de ${cMin} a ${cMax}` : cMin ? `a partir de ${cMin}` : `até ${cMax}`} dias (sem consumo fica de fora)` : '';
   $('conta').textContent = `${fmtI.format(filtrados.length)} produtos${PERM.valores ? ` · total ${fmtR.format(soma)}` : ''}${cobTxt}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
   $('mais').hidden = filtrados.length <= limite;
   const nAj = Object.keys(AJ).length;
@@ -542,7 +543,7 @@ $('copiar').addEventListener('click', async () => {
   const COL = [  // [cabeçalho, valor, grupo]  grupo: b = todos, i = dados internos, v = valores
     ['Código', p => p.cdpro, 'b'], ['Descrição', p => p.descr, 'b'], ['Unidade', p => p.unida, 'b'],
     ['Lista', p => p.lista, 'i'], ['Curva fin.', p => 'CBA'[p.nf - 1], 'i'], ['Curva fís.', p => 'CBA'[p.nfi - 1], 'i'], ['Curva freq.', p => 'CBA'[p.nq - 1], 'i'],
-    ['Estoque F1', p => n(p.e1), 'i'], ['Estoque F2', p => n(p.e2), 'i'], ['Consumo/dia', p => n(p.media), 'i'], ['Cobertura geral', p => n(p.dg), 'i'], ['Cobertura F2', p => n(p.d2), 'i'],
+    ['Estoque F1', p => n(p.e1), 'i'], ['Estoque F2', p => n(p.e2), 'i'], ['Consumo30D', p => n(p.media * 30), 'i'], ['DiasConsumo (F1+F2)', p => n(p.dg), 'i'], ['DiasConsumo (F2)', p => n(p.d2), 'i'],
     ['Qtd sugerida', p => p.qtd, 'i'], ['Qtd pedido', p => p.qtdF, 'b'],
     ['Preço compra', p => n(p.prcomn), 'v'], ['Total', p => n(p.total), 'v'], ['Impacto no pedido (%)', p => p.total ? n(p.impacto * 100) : '', 'v'], ['Último fornecedor', p => cnpj(p.cdfnr), 'v'],
   ].filter(([, , g]) => g === 'b' || (g === 'i' && PERM.internos) || (g === 'v' && PERM.valores));
