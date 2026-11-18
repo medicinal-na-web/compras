@@ -8,18 +8,21 @@
   --brand:#1f5f8b; --brand2:#2a78ad; --soft:#e6eef5; --field:#fff;
   --ok:#1f7a4d; --okbg:#e5f3ec; --warn:#a15a10; --warnbg:#fbf0e2; --err:#b3261e; --errbg:#fbe9e7;
   --shadow:0 1px 2px rgba(20,25,31,.06),0 8px 24px rgba(20,25,31,.06); --radius:14px;
+  --heat:#e0613a;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1418; --card:#171e24; --ink:#e6ebef; --mut:#93a0ab; --line:#2a343d;
   --brand:#4f97c9; --brand2:#6fb0dc; --soft:#1d2a35; --field:#11171c;
   --ok:#5fc08f; --okbg:#173327; --warn:#e2a35c; --warnbg:#3a2a17; --err:#f08a80; --errbg:#3d1d1a;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+  --heat:#ff7a52;
 }}
 :root[data-theme="dark"]{
   --bg:#0f1418; --card:#171e24; --ink:#e6ebef; --mut:#93a0ab; --line:#2a343d;
   --brand:#4f97c9; --brand2:#6fb0dc; --soft:#1d2a35; --field:#11171c;
   --ok:#5fc08f; --okbg:#173327; --warn:#e2a35c; --warnbg:#3a2a17; --err:#f08a80; --errbg:#3d1d1a;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+  --heat:#ff7a52;
 }
 *{box-sizing:border-box}
 body{background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.45}
@@ -66,6 +69,10 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
 .curvas{display:inline-flex; gap:2px}
 .curvas i{font-style:normal; font-size:11px; font-weight:700; width:18px; text-align:center; border-radius:4px; padding:1px 0}
 .cA{background:var(--okbg); color:var(--ok)} .cB{background:var(--warnbg); color:var(--warn)} .cC{background:var(--soft); color:var(--mut)}
+.tbl td.heat{font-weight:700; min-width:96px}
+.tbl td.heat i{font-style:normal; font-weight:600; font-size:11px; color:var(--mut); margin-left:4px}
+.legenda{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mut)}
+.legenda .barra{width:120px; height:10px; border-radius:5px; background:linear-gradient(90deg, color-mix(in srgb, var(--heat) 4%, transparent), color-mix(in srgb, var(--heat) 60%, transparent)); border:1px solid var(--line)}
 .ctl{font-size:11px; font-weight:700; color:var(--err); margin-left:6px}
 .cobfiltro{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding-top:12px; border-top:1px dashed var(--line)}
 .cobfiltro .ctipo{flex:1 1 240px; max-width:320px} .cobfiltro .cdias{flex:0 1 120px}
@@ -115,7 +122,10 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
       </div>
     </div>
     <div class="row" style="justify-content:space-between">
-      <p class="mut" id="conta"></p>
+      <div style="display:flex; flex-direction:column; gap:4px; min-width:0">
+        <p class="mut" id="conta"></p>
+        <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
+      </div>
       <div class="row"><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
     <div class="tw"><table class="tbl" id="tbl"><thead><tr>
@@ -131,6 +141,7 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
       <th data-k="qtd" class="r">Qtd. sugerida</th>
       <th data-k="prcomn" class="r">Preço compra</th>
       <th data-k="total" class="r" aria-sort="descending">Total</th>
+      <th data-k="impacto" class="r" title="Participação do item no valor sugerido dos indicados na tela">Impacto no pedido</th>
     </tr></thead><tbody id="linhas"></tbody></table></div>
     <div class="row"><button class="sec" id="mais" hidden>Mostrar mais 200</button></div>
   </section>
@@ -246,7 +257,13 @@ function kpis() {
   ].map(([a, b, c]) => `<div class="kpi"><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join('');
 }
 
-let ord = {k:'total', dir:-1}, limite = 200, filtrados = [];
+let ord = {k:'total', dir:-1}, limite = 200, filtrados = [], impactoMax = 0;
+const fmtP = new Intl.NumberFormat('pt-BR', {style:'percent', minimumFractionDigits:1, maximumFractionDigits:1});
+function calor(p) {
+  if (!p.total) return '<td class="r mut">–</td>';
+  const h = impactoMax ? Math.round(4 + 56 * p.impacto / impactoMax) : 0;   // 4% a 60% de cor, relativo ao maior item da tela
+  return `<td class="r heat" style="background:color-mix(in srgb, var(--heat) ${h}%, transparent)" title="Acumulado até este item: ${fmtP.format(p.acum)}">${fmtP.format(p.impacto)}${p.acum - p.impacto < 0.8 ? '<i>80%</i>' : ''}</td>`;
+}
 function filtrar() {
   const q = $('fBusca').value.trim().toLowerCase(), ind = $('fIndica').value, li = $('fLista').value, ct = $('fCtrl').value, si = $('fSitua').value;
   const ck = $('fCobTipo').value, cMin = parseFloat($('fCobMin').value), cMax = parseFloat($('fCobMax').value);
@@ -256,6 +273,14 @@ function filtrar() {
     (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
     (!temCob || (p[ck] !== null && (isNaN(cMin) || p[ck] >= cMin) && (isNaN(cMax) || p[ck] <= cMax))) &&
     (!q || String(p.cdpro).includes(q) || p.descr.toLowerCase().includes(q)));
+  // impacto: fatia de cada item no valor sugerido do que está na tela, e o acumulado do maior para o menor
+  const totalTela = filtrados.reduce((s, p) => s + p.total, 0);
+  let acum = 0;
+  [...filtrados].sort((a, b) => b.total - a.total).forEach(p => {
+    p.impacto = totalTela ? p.total / totalTela : 0;
+    acum += p.impacto; p.acum = p.total ? acum : null;
+  });
+  impactoMax = Math.max(0, ...filtrados.map(p => p.impacto));
   const {k, dir} = ord;
   filtrados.sort((a, b) => {
     const x = a[k] ?? -Infinity, y = b[k] ?? -Infinity;
@@ -276,13 +301,17 @@ function tabela() {
     <td class="r">${cob(p.dg, P.cobGeral)}</td><td class="r">${cob(p.d2, P.cobF2)}</td>
     <td class="r"><b>${p.qtd ? fmtI.format(p.qtd) : '–'}</b></td>
     <td class="r">${p.prcomn ? fmtR.format(p.prcomn) : '<span class="chip warn">sem preço</span>'}</td>
-    <td class="r">${p.total ? fmtR.format(p.total) : '–'}</td></tr>`).join('');
-  $('linhas').innerHTML = linhas || '<tr><td colspan="12" class="mut">Nenhum produto com esses filtros.</td></tr>';
+    <td class="r">${p.total ? fmtR.format(p.total) : '–'}</td>
+    ${calor(p)}</tr>`).join('');
+  $('linhas').innerHTML = linhas || '<tr><td colspan="13" class="mut">Nenhum produto com esses filtros.</td></tr>';
   const soma = filtrados.reduce((s, p) => s + p.total, 0);
   const cMin = $('fCobMin').value, cMax = $('fCobMax').value;
   const cobTxt = cMin || cMax ? ` · ${$('fCobTipo').value === 'd2' ? 'cobertura F2' : 'cobertura geral'} ${cMin && cMax ? `de ${cMin} a ${cMax}` : cMin ? `a partir de ${cMin}` : `até ${cMax}`} dias (sem consumo fica de fora)` : '';
   $('conta').textContent = `${fmtI.format(filtrados.length)} produtos · total ${fmtR.format(soma)}${cobTxt}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
   $('mais').hidden = filtrados.length <= limite;
+  const nPareto = filtrados.filter(p => p.total && p.acum - p.impacto < 0.8).length;
+  const nValor = filtrados.filter(p => p.total).length;
+  $('pareto').textContent = nValor ? `${fmtI.format(nPareto)} de ${fmtI.format(nValor)} itens fazem 80% do valor (marcados com 80%)` : '';
   document.querySelectorAll('#tbl th').forEach(th => th.setAttribute('aria-sort', th.dataset.k === ord.k ? (ord.dir > 0 ? 'ascending' : 'descending') : 'none'));
 }
 
@@ -341,9 +370,9 @@ $('padrao').addEventListener('click', () => { P = {...PADRAO}; try { localStorag
 
 // copiar (cola direto no Excel)
 $('copiar').addEventListener('click', async () => {
-  const cab = ['Código','Descrição','Lista','Curva fin.','Curva fís.','Curva freq.','Estoque F1','Estoque F2','Consumo/dia','Cobertura geral','Cobertura F2','Qtd sugerida','Preço compra','Total'];
+  const cab = ['Código','Descrição','Lista','Curva fin.','Curva fís.','Curva freq.','Estoque F1','Estoque F2','Consumo/dia','Cobertura geral','Cobertura F2','Qtd sugerida','Preço compra','Total','Impacto no pedido (%)'];
   const n = v => v === null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
-  const txt = [cab.join('\t'), ...filtrados.map(p => [p.cdpro, p.descr, p.lista, 'CBA'[p.nf - 1], 'CBA'[p.nfi - 1], 'CBA'[p.nq - 1], n(p.e1), n(p.e2), n(p.media), n(p.dg), n(p.d2), p.qtd, n(p.prcomn), n(p.total)].join('\t'))].join('\n');
+  const txt = [cab.join('\t'), ...filtrados.map(p => [p.cdpro, p.descr, p.lista, 'CBA'[p.nf - 1], 'CBA'[p.nfi - 1], 'CBA'[p.nq - 1], n(p.e1), n(p.e2), n(p.media), n(p.dg), n(p.d2), p.qtd, n(p.prcomn), n(p.total), p.total ? n(p.impacto * 100) : ''].join('\t'))].join('\n');
   try { await navigator.clipboard.writeText(txt); $('msgCopia').textContent = `${fmtI.format(filtrados.length)} linhas copiadas. Cole no Excel.`; }
   catch (e) { $('msgCopia').textContent = 'O navegador bloqueou a cópia. Tente pelo app no computador.'; }
 });
