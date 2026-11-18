@@ -230,15 +230,16 @@ const fmtR = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'});
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $ = id => document.getElementById(id);
 
+// os cartões resumem o que está filtrado na tela
 function kpis() {
-  const c = prods.filter(p => p.comprar);
+  const c = filtrados.filter(p => p.comprar);
   const total = c.reduce((s, p) => s + p.total, 0);
   const semPreco = c.filter(p => !p.prcomn).length;
   const ctrl = c.filter(p => p.ctrl).length;
   const l12 = c.filter(p => p.lista <= 2);
   $('kpis').innerHTML = [
-    ['Indicados para compra', fmtI.format(c.length), `de ${fmtI.format(prods.length)} produtos`],
-    ['Valor sugerido', fmtR.format(total), 'quantidade × preço de compra'],
+    ['Indicados para compra', fmtI.format(c.length), `na tela, de ${fmtI.format(prods.length)} produtos`],
+    ['Valor sugerido', fmtR.format(total), 'soma dos indicados na tela'],
     ['Listas 1 e 2', fmtI.format(l12.length), fmtR.format(l12.reduce((s, p) => s + p.total, 0))],
     ['Controlados indicados', fmtI.format(ctrl), 'portaria preenchida'],
     ['Indicados sem preço', fmtI.format(semPreco), semPreco ? 'preço de compra zerado no cadastro' : 'todos com preço'],
@@ -264,6 +265,7 @@ function filtrar() {
 const cob = (v, lim) => v === null ? '<span class="chip">sem consumo</span>'
   : `<span class="chip ${v <= lim ? 'err' : v <= lim * 2 ? 'warn' : 'ok'}">${fmtI.format(v)} d</span>`;
 function tabela() {
+  kpis();
   const linhas = filtrados.slice(0, limite).map(p => `<tr class="${p.comprar ? 'compra' : ''}">
     <td>${p.cdpro}</td>
     <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
@@ -299,7 +301,7 @@ function curvas() {
   }).join('');
 }
 
-function tudo() { calcular(); kpis(); filtrar(); tabela(); curvas(); }
+function tudo() { calcular(); filtrar(); tabela(); curvas(); }
 
 // abas
 document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => abrir(b.dataset.tab)));
