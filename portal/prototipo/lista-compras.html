@@ -212,7 +212,7 @@ button.perigo{color:var(--err)}
         <p class="mut" id="conta" style="font-size:13px"></p>
         <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
       </div>
-      <div class="row"><select id="cicloDestino" aria-label="Ciclo que recebe os itens marcados" style="width:auto; font-size:12px; padding:4px 6px" hidden></select><button class="mini" id="aplicarCiclo" hidden></button><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
+      <div class="row"><button class="mini" id="aplicarCiclo" hidden></button><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
     <div class="tw" id="twForn"><table class="tbl" id="tblForn"><thead><tr>
       <th>Descrição</th><th class="r">Quantidade</th><th class="r" title="Menor quantidade que você vende deste item">Qtd. mínima</th>
@@ -326,7 +326,7 @@ button.perigo{color:var(--err)}
         <li><b>Indicação</b>: Listas 3–5 compram com DiasConsumo (F1+F2) até 45 (Lista 5 só se teve consumo). Listas 1–2 compram com DiasConsumo (F2) até 30; se o produto for controlado, o DiasConsumo (F1+F2) também precisa estar abaixo de 45.</li>
         <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
         <li><b>Quantidade</b> = Consumo30D, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
-        <li><b>Ciclo de compras</b>: o comprador filtra a lista, marca os itens (o quadradinho do cabeçalho marca todos do filtro), desmarca o que não deve entrar e clica em "Aplicar ao ciclo". Repete com outros filtros. Ao lançar, o ciclo abre a cotação e envia convite por e-mail a todo fornecedor com acesso liberado (os fornecedores habituais sem acesso ficam registrados como não enviados); ainda aceita itens, que ficam marcados como adicionados após a abertura e geram e-mail aos fornecedores com acesso. Desmarcar um item do ciclo tira o item: em montagem ele só sai; com o ciclo aberto fica inativo (retirado), some da cotação e os fornecedores que cotam o item recebem aviso. Podem existir vários ciclos ao mesmo tempo, mas cada item fica ativo em um ciclo só. Ao travar, não entra nem sai mais nada.</li>
+        <li><b>Ciclo de compras</b>: o comprador filtra a lista, marca os itens (o quadradinho do cabeçalho marca todos do filtro), desmarca o que não deve entrar e clica em "Aplicar ao ciclo". Repete com outros filtros. Ao lançar, o ciclo abre a cotação e envia convite por e-mail a todo fornecedor com acesso liberado (os fornecedores habituais sem acesso ficam registrados como não enviados); ainda aceita itens, que ficam marcados como adicionados após a abertura e geram e-mail aos fornecedores com acesso. Desmarcar um item do ciclo tira o item: em montagem ele só sai; com o ciclo aberto fica inativo (retirado), some da cotação e os fornecedores que cotam o item recebem aviso. Só existe um ciclo ativo por vez: como o ciclo aberto ainda aceita itens, o próximo ciclo só começa depois que o atual é travado. Ao travar, não entra nem sai mais nada.</li>
         <li><b>Cotação do fornecedor</b>: ele informa o preço por unidade e a quantidade mínima. Depois do primeiro preço, só pode reduzir (−5%, −10% ou um valor menor digitado). Enquanto não reduz, vê se tem o menor preço; depois da redução, o resultado fica oculto até o fechamento. Total = preço × a maior entre a quantidade pedida e a mínima.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
@@ -362,16 +362,15 @@ const salvarLIB = () => { try { localStorage.setItem('compras.liberados', JSON.s
 let CICLOS = [];
 try { CICLOS = JSON.parse(localStorage.getItem('compras.ciclos') || '[]') || []; } catch (e) {}
 const salvarCICLOS = () => { try { localStorage.setItem('compras.ciclos', JSON.stringify(CICLOS)); } catch (e) {} };
-// vários ciclos podem estar em montagem ou abertos ao mesmo tempo; um item só fica ativo em um deles
+// um ciclo ativo por vez (em montagem ou aberto): como o ciclo aberto ainda aceita itens, o próximo só começa depois de travar
 const ativo = (c, cd) => !!c?.itens[cd] && !c.itens[cd].retirado;
 const ativos = c => Object.keys(c.itens).filter(cd => !c.itens[cd].retirado);
 const vivos = () => CICLOS.filter(c => c.status !== 'travado');
 const cicloDoItem = cd => vivos().find(c => ativo(c, cd)) || null;
 const abertoDoItem = cd => CICLOS.find(c => c.status === 'aberto' && ativo(c, cd)) || null;
 const proximoId = () => (CICLOS.reduce((m, c) => Math.max(m, c.id), 0) || 0) + 1;
-let destinoId = null, verId = null;
-try { destinoId = JSON.parse(localStorage.getItem('compras.cicloDestino') || 'null'); } catch (e) {}
-const destino = () => vivos().find(c => c.id === destinoId) || null;   // null = abrir um ciclo novo
+let verId = null;
+const destino = () => vivos()[0] || null;   // null = o próximo "Aplicar" abre um ciclo novo
 const SEL = new Set();   // itens marcados na lista para entrar no ciclo
 const fmtD = iso => iso ? new Date(iso).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '–';
 const NOME_ST = {montagem:'em montagem', aberto:'aberto para cotação', travado:'travado'};
@@ -625,10 +624,8 @@ function curvas() {
 // marcação na lista
 const marcaveis = () => filtrados.filter(p => !cicloDoItem(p.cdpro));
 function botaoCiclo() {
-  const b = $('aplicarCiclo'), n = SEL.size, c = destino(), sd = $('cicloDestino');
-  sd.innerHTML = vivos().map(cl => `<option value="${cl.id}">Ciclo ${cl.id} · ${NOME_ST[cl.status]}</option>`).join('') + `<option value="novo">Novo ciclo (${proximoId()})</option>`;
-  sd.value = c ? String(c.id) : 'novo';
-  sd.hidden = b.hidden = !PERM.ajusta || !n;
+  const b = $('aplicarCiclo'), n = SEL.size, c = destino();
+  b.hidden = !PERM.ajusta || !n;
   b.textContent = c?.status === 'aberto'
     ? `Incluir ${fmtI.format(n)} ${n === 1 ? 'item' : 'itens'} no ciclo ${c.id} (aberto)`
     : `Aplicar ${fmtI.format(n)} ${n === 1 ? 'item' : 'itens'} ao ciclo ${c ? c.id : proximoId()}`;
@@ -644,10 +641,9 @@ function novoCiclo() {
 }
 function aplicarAoCiclo() {
   const c = destino() || novoCiclo();
-  destinoId = c.id; try { localStorage.setItem('compras.cicloDestino', JSON.stringify(destinoId)); } catch (e) {}
   const agora = new Date().toISOString(), novos = [];
   SEL.forEach(cd => {
-    if (cicloDoItem(cd)) return;   // já está ativo em outro ciclo
+    if (ativo(c, cd)) return;
     c.itens[cd] = {em: agora, apos: c.status === 'aberto'}; novos.push(cd);
   });
   if (c.status === 'aberto' && novos.length) avisar(c, 'inclusao', novos, agora);
@@ -738,15 +734,11 @@ function ciclo() {
     <td>${c.status !== 'travado' ? `<button class="sec mini" data-tirar="${p.cdpro}">${c.status === 'aberto' ? 'retirar' : 'tirar'}</button>` : ''}</td></tr>`).join('')
     || '<tr><td colspan="9" class="mut">Ciclo sem itens.</td></tr>';
   const outros = CICLOS.filter(x => x !== c);
-  $('cicloHist').textContent = outros.length ? 'Outros ciclos: ' + outros.map(x => `ciclo ${x.id} (${NOME_ST[x.status]}, ${ativos(x).length} itens)`).join(' · ') : '';
+  $('cicloHist').textContent = (c.status === 'aberto' ? 'Enquanto este ciclo estiver aberto, novos itens entram nele. O próximo ciclo começa depois de travar este. ' : '')
+    + (outros.length ? 'Outros ciclos: ' + outros.map(x => `ciclo ${x.id} (${NOME_ST[x.status]}, ${ativos(x).length} itens)`).join(' · ') : '');
   verId = c.id;
 }
 $('cicloVer').addEventListener('change', () => { verId = +$('cicloVer').value; confirmaCiclo = ''; ciclo(); });
-$('cicloDestino').addEventListener('change', () => {
-  const v = $('cicloDestino').value;
-  destinoId = v === 'novo' ? null : +v; try { localStorage.setItem('compras.cicloDestino', JSON.stringify(destinoId)); } catch (e) {}
-  botaoCiclo();
-});
 $('cicloAcoes').addEventListener('click', e => {
   const b = e.target.closest('button[data-ciclo]'); if (!b) return;
   const c = CICLOS.find(x => x.id === verId), a = b.dataset.ciclo; if (!c) return;
