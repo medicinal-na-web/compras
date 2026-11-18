@@ -87,6 +87,20 @@ table.tbl{border-collapse:separate; border-spacing:0; width:100%; font-size:12.5
 .cot button{font-size:11px; padding:4px 7px; border-radius:6px}
 #tblForn td.desc{max-width:none; min-width:220px}
 .mini-kpis{display:flex; flex-wrap:wrap; gap:6px}
+/* ciclo de compras */
+.sel{display:inline-flex; align-items:center; gap:6px; cursor:pointer}
+.sel input{width:auto; margin:0; accent-color:var(--brand)}
+.nociclo{font-size:10px; font-weight:700; color:var(--brand); background:var(--soft); border-radius:999px; padding:1px 6px}
+.st{display:inline-block; font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px}
+.st.montagem{background:var(--soft); color:var(--brand)} .st.aberto{background:var(--okbg); color:var(--ok)} .st.travado{background:var(--line); color:var(--mut)}
+.ciclo-top{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; justify-content:space-between}
+.ciclo-top h2{font-size:18px; display:flex; align-items:center; gap:10px}
+.datas{display:flex; flex-wrap:wrap; gap:4px 16px; font-size:12px; color:var(--mut)}
+.apos{background:var(--warnbg); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px}
+.apos h3,.emails h3{font-size:13px}
+.apos ul,.emails ul{margin:0; padding-left:18px; font-size:12.5px}
+.emails{border:1px dashed var(--line); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px}
+#twCiclo{max-height:calc(100dvh - var(--hdr, 130px) - 300px)}
 #twCad{max-height:calc(100dvh - var(--hdr, 130px) - 230px)}
 #tblCad td{vertical-align:top}
 #tblCad .em{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px}
@@ -157,6 +171,7 @@ button.perigo{color:var(--err)}
     <button role="tab" id="tab-curvas" aria-selected="false" data-tab="curvas">Curvas e listas</button>
     <button role="tab" id="tab-param" aria-selected="false" data-tab="param">Parâmetros</button>
     <button role="tab" id="tab-regras" aria-selected="false" data-tab="regras">Como é calculado</button>
+    <button role="tab" id="tab-ciclo" aria-selected="false" data-tab="ciclo">Ciclo de compras</button>
     <button role="tab" id="tab-fornec" aria-selected="false" data-tab="fornec">Fornecedores</button>
     <button role="tab" id="tab-acessos" aria-selected="false" data-tab="acessos">Acessos</button>
   </nav>
@@ -197,14 +212,14 @@ button.perigo{color:var(--err)}
         <p class="mut" id="conta" style="font-size:13px"></p>
         <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
       </div>
-      <div class="row"><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
+      <div class="row"><button class="mini" id="aplicarCiclo" hidden></button><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
     <div class="tw" id="twForn"><table class="tbl" id="tblForn"><thead><tr>
       <th>Descrição</th><th class="r">Quantidade</th><th class="r" title="Menor quantidade que você vende deste item">Qtd. mínima</th>
       <th class="r">Preço por unidade</th><th class="r">Total</th><th title="Quem tem a menor cotação. Some depois que você reduz o preço.">Quem ganha</th>
     </tr></thead><tbody id="linhasForn"></tbody></table></div>
     <div class="tw" id="twMain"><table class="tbl" id="tbl"><thead><tr>
-      <th data-k="cdpro">Cód.</th>
+      <th data-k="cdpro"><span class="sel"><input type="checkbox" id="selTodos" title="Marcar todos os itens do filtro (aplicar a todos)" aria-label="Marcar todos os itens do filtro">Cód.</span></th>
       <th data-k="descr">Descrição</th>
       <th data-k="lista" title="Importância: Lista 1 (5 barras, essencial) até Lista 5 (1 barra). Linhas das listas 1, 2 e 3 em amarelo, do mais forte ao mais fraco.">Lista</th>
       <th data-k="nota" title="Financeiro · Físico · Frequência (90 dias)">Curvas<br>(F-Fi-Fr)</th>
@@ -247,6 +262,21 @@ button.perigo{color:var(--err)}
     <div class="row"><button class="sec" id="padrao">Voltar aos valores do Power BI</button><span class="mut" style="font-size:12px">Só o administrador altera os parâmetros.</span></div>
   </section>
 
+  <section id="sec-ciclo" class="card" hidden>
+    <div class="ciclo-top">
+      <h2 id="cicloTitulo"></h2>
+      <div class="row" id="cicloAcoes"></div>
+    </div>
+    <div class="datas" id="cicloDatas"></div>
+    <div class="mini-kpis" id="cicloKpis"></div>
+    <div class="apos" id="cicloApos" hidden></div>
+    <div class="tw" id="twCiclo"><table class="tbl" id="tblCiclo"><thead><tr>
+      <th>Cód.</th><th>Descrição</th><th>Lista</th><th class="r">Quantidade</th><th class="r">Preço compra</th><th class="r">Total</th><th>Fornecedor habitual</th><th>Entrou em</th><th></th>
+    </tr></thead><tbody id="linhasCiclo"></tbody></table></div>
+    <div class="emails" id="cicloEmails" hidden></div>
+    <p class="mut" id="cicloHist" style="font-size:12.5px"></p>
+  </section>
+
   <section id="sec-fornec" class="card" hidden>
     <h2>Fornecedores e acesso à cotação</h2>
     <p class="mut">Cadastro de fornecedores do FórmulaCerta (FC02000). Só quem tem e-mail no cadastro pode receber acesso: o login é por código enviado a esse e-mail. Para liberar um fornecedor sem e-mail, cadastre o e-mail dele no FórmulaCerta; ele aparece aqui na próxima carga.</p>
@@ -275,6 +305,7 @@ button.perigo{color:var(--err)}
       <tr><td>Alterar parâmetros (limites de DiasConsumo, cortes das curvas, peso)</td><td class="s">sim</td><td class="n">só vê</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Cotar os itens do pedido: preço por unidade, quantidade mínima e reduções de 5%, 10% ou valor digitado</td><td class="n">não</td><td class="n">não</td><td class="n">não</td><td class="s">sim</td></tr>
       <tr><td>Ver se tem o menor preço (até reduzir o próprio preço; depois, só no fechamento)</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="s">sim</td></tr>
+      <tr><td>Montar, lançar e travar ciclos de compras (incluir itens depois da abertura avisa os fornecedores)</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Liberar e revogar o acesso de fornecedores (só e-mails do cadastro do FórmulaCerta)</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Cadastrar e remover acessos</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td><td class="n">não</td></tr>
     </table></div>
@@ -294,6 +325,7 @@ button.perigo{color:var(--err)}
         <li><b>Indicação</b>: Listas 3–5 compram com DiasConsumo (F1+F2) até 45 (Lista 5 só se teve consumo). Listas 1–2 compram com DiasConsumo (F2) até 30; se o produto for controlado, o DiasConsumo (F1+F2) também precisa estar abaixo de 45.</li>
         <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
         <li><b>Quantidade</b> = Consumo30D, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
+        <li><b>Ciclo de compras</b>: o comprador filtra a lista, marca os itens (o quadradinho do cabeçalho marca todos do filtro), desmarca o que não deve entrar e clica em "Aplicar ao ciclo". Repete com outros filtros. Ao lançar, o ciclo abre a cotação aos fornecedores; ainda aceita itens, que ficam marcados como adicionados após a abertura e geram e-mail aos fornecedores com acesso. Ao travar, não entra mais nada.</li>
         <li><b>Cotação do fornecedor</b>: ele informa o preço por unidade e a quantidade mínima. Depois do primeiro preço, só pode reduzir (−5%, −10% ou um valor menor digitado). Enquanto não reduz, vê se tem o menor preço; depois da redução, o resultado fica oculto até o fechamento. Total = preço × a maior entre a quantidade pedida e a mínima.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
@@ -324,6 +356,17 @@ const lerNum = s => parseFloat(String(s).trim().replace(/\./g, '').replace(',', 
 let LIB = {};
 try { LIB = JSON.parse(localStorage.getItem('compras.liberados') || '{}') || {}; } catch (e) {}
 const salvarLIB = () => { try { localStorage.setItem('compras.liberados', JSON.stringify(LIB)); } catch (e) {} };
+// ciclos de compras. status: montagem -> aberto (fornecedores cotam; ainda aceita inclusões) -> travado.
+// itens[cdpro] = {em, apos (entrou depois da abertura), qtd (congelada ao travar)}. Só neste navegador, por enquanto.
+let CICLOS = [];
+try { CICLOS = JSON.parse(localStorage.getItem('compras.ciclos') || '[]') || []; } catch (e) {}
+const salvarCICLOS = () => { try { localStorage.setItem('compras.ciclos', JSON.stringify(CICLOS)); } catch (e) {} };
+const cicloAtual = () => CICLOS.find(c => c.status !== 'travado') || null;   // em montagem ou aberto
+const cicloAberto = () => CICLOS.find(c => c.status === 'aberto') || null;
+const proximoId = () => (CICLOS.reduce((m, c) => Math.max(m, c.id), 0) || 0) + 1;
+const SEL = new Set();   // itens marcados na lista para entrar no ciclo
+const fmtD = iso => iso ? new Date(iso).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '–';
+const NOME_ST = {montagem:'em montagem', aberto:'aberto para cotação', travado:'travado'};
 const LISTA_REGRA = {1:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',2:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',3:'DiasConsumo (F1+F2) ≤ 45',4:'DiasConsumo (F1+F2) ≤ 45',5:'Teve consumo e DiasConsumo (F1+F2) ≤ 45'};
 
 const prods = D.map(r => ({cdpro:r[0], descr:r[1], situa:r[2], unida:r[3], prcomn:r[4], ctrl:r[5], porta:r[6], e1:r[7], e2:r[8], f30:r[9], f90:r[10], c90:r[11], q90:r[12], cdfnr:r[13]}));
@@ -334,8 +377,8 @@ prods.forEach(p => p.forn = fornNome(p.cdfnr));
 
 // perfis de acesso (simulados aqui; no portal vêm do login)
 const PERFIS = {
-  admin:      {abas:['lista','curvas','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
-  comprador:  {abas:['lista','param','regras','fornec'],           internos:true,  valores:true,  ajusta:true,  param:false, curvas:false,
+  admin:      {abas:['lista','curvas','ciclo','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
+  comprador:  {abas:['lista','ciclo','param','regras','fornec'],   internos:true,  valores:true,  ajusta:true,  param:false, curvas:false,
                ocultar:[8, 9, 14]},   // DiasConsumo (F1+F2), DiasConsumo (F2) e último fornecedor
   producao:   {abas:['lista','curvas','regras'],                   internos:true,  valores:false, ajusta:false, param:false, curvas:true},
   fornecedor: {abas:['lista'],                                     internos:false, valores:false, ajusta:false, param:false, curvas:false, forn:true},
@@ -433,6 +476,7 @@ function kpis() {
     ['Listas 1 e 2', fmtI.format(l12.length), fmtR.format(l12.reduce((s, p) => s + p.total, 0))],
     ['Controlados', fmtI.format(ctrl), ''],
     ['Sem preço', fmtI.format(semPreco), ''],
+    ...(cicloAtual() ? [[`Ciclo ${cicloAtual().id}`, fmtI.format(Object.keys(cicloAtual().itens).length), NOME_ST[cicloAtual().status]]] : []),
   ].map(([a, b, c]) => `<div class="kpi"><small>${a}</small><b>${b}</b>${c ? `<span>${esc(c)}</span>` : ''}</div>`).join('');
 }
 
@@ -449,7 +493,7 @@ function filtrar() {
   const ck = $('fCobTipo').value, cMin = parseFloat($('fCobMin').value), cMax = parseFloat($('fCobMax').value);
   const temCob = !isNaN(cMin) || !isNaN(cMax);
   filtrados = prods.filter(p =>
-    (PERM.forn ? p.qtdF > 0 && ($('fornEscopo').value === 'todos' || p.cdfnr === fornSel) :
+    (PERM.forn ? !!cicloAberto()?.itens[p.cdpro] && ($('fornEscopo').value === 'todos' || p.cdfnr === fornSel) :
       (ind === 'todos' || (ind === 'comprar' ? p.comprar || p.ajustado : !p.comprar && !p.ajustado)) && (!fo || p.cdfnr === fo)) &&
     (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
     (!temCob || (p[ck] !== null && (isNaN(cMin) || p[ck] >= cMin) && (isNaN(cMax) || p[ck] <= cMax))) &&
@@ -495,7 +539,7 @@ function linhasFornecedor() {
     const c = cotDe(p.cdpro), un = esc(p.unida);
     const minAcima = c.min && c.min > p.qtdF;
     return `<tr data-cd="${p.cdpro}">
-      <td class="desc">${esc(p.descr)}${p.cdfnr === fornSel ? ' <span class="chip" title="Último lote deste item veio deste fornecedor">habitual</span>' : ''}</td>
+      <td class="desc">${esc(p.descr)}${p.cdfnr === fornSel ? ' <span class="chip" title="Último lote deste item veio deste fornecedor">habitual</span>' : ''}${cicloAberto()?.itens[p.cdpro]?.apos ? ` <span class="chip warn" title="Incluído depois da abertura, em ${fmtD(cicloAberto().itens[p.cdpro].em)}">novo na cotação</span>` : ''}</td>
       <td class="r"><b>${fmtI.format(p.qtdF)}</b> ${un}</td>
       <td class="r"><div class="cot"><input class="min" data-c="min" inputmode="decimal" value="${c.min ?? ''}" placeholder="–" aria-label="Quantidade mínima de ${esc(p.descr)}"> ${un}</div>
         ${minAcima ? '<div class="qsug">acima do pedido: o total usa a mínima</div>' : ''}</td>
@@ -504,7 +548,7 @@ function linhasFornecedor() {
         ${c.lances > 1 ? `<div class="qsug">${c.lances} lances</div>` : ''}</td>
       <td class="r">${c.preco != null ? fmtR.format(totalCot(p)) : '–'}</td>
       <td>${STATUS_COT[statusCot(p)]}</td></tr>`;
-  }).join('') || '<tr><td colspan="6" class="mut">Nenhum item nesta cotação.</td></tr>';
+  }).join('') || `<tr><td colspan="6" class="mut">${cicloAberto() ? 'Nenhum item desta cotação para este fornecedor.' : 'Nenhuma cotação aberta no momento.'}</td></tr>`;
 }
 function darPreco(cd, v) {
   const c = cotDe(cd);
@@ -524,7 +568,9 @@ function tabela() {
     return;
   }
   const linhas = filtrados.slice(0, limite).map(p => `<tr data-cd="${p.cdpro}" class="${p.qtdF > 0 ? 'compra' : ''}${p.ajustado ? ' ajust' : ''}${p.lista <= 3 ? ' l' + p.lista : ''}">
-    <td>${p.cdpro}</td>
+    <td>${!PERM.ajusta ? p.cdpro : cicloAtual()?.itens[p.cdpro]
+      ? `<span class="sel" title="Já está no ciclo ${cicloAtual().id}"><span class="nociclo">ciclo</span>${p.cdpro}</span>`
+      : `<label class="sel"><input type="checkbox" data-sel="${p.cdpro}" ${SEL.has(p.cdpro) ? 'checked' : ''} aria-label="Marcar ${esc(p.descr)}">${p.cdpro}</label>`}</td>
     <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
     <td>${importancia(p.lista)}</td>
     <td><span class="curvas">${[p.nf, p.nfi, p.nq].map(n => `<i class="c${'CBA'[n - 1]}">${'CBA'[n - 1]}</i>`).join('')}</span></td>
@@ -543,6 +589,7 @@ function tabela() {
   const cobTxt = cMin || cMax ? ` · ${$('fCobTipo').value === 'd2' ? 'DiasConsumo (F2)' : 'DiasConsumo (F1+F2)'} ${cMin && cMax ? `de ${cMin} a ${cMax}` : cMin ? `a partir de ${cMin}` : `até ${cMax}`} dias (sem consumo fica de fora)` : '';
   $('conta').textContent = `${fmtI.format(filtrados.length)} produtos${PERM.valores ? ` · total ${fmtR.format(soma)}` : ''}${cobTxt}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
   $('mais').hidden = filtrados.length <= limite;
+  botaoCiclo();
   const nAj = Object.keys(AJ).length;
   $('desfazer').hidden = !nAj || !PERM.ajusta; $('desfazer').dataset.conf = '';
   $('desfazer').textContent = `Desfazer ${fmtI.format(nAj)} ${nAj === 1 ? 'ajuste' : 'ajustes'}`;
@@ -566,6 +613,105 @@ function curvas() {
       ${[3,2,1].map(f => `<tr><th>${'CBA'[f - 1]}</th>${[3,2,1].map(fi => `<td>${fmtI.format(cel(f, fi))}</td>`).join('')}</tr>`).join('')}</table></div>`;
   }).join('');
 }
+
+// marcação na lista
+const marcaveis = () => filtrados.filter(p => !cicloAtual()?.itens[p.cdpro]);
+function botaoCiclo() {
+  const b = $('aplicarCiclo'), n = SEL.size, c = cicloAtual();
+  b.hidden = !PERM.ajusta || !n;
+  b.textContent = c?.status === 'aberto'
+    ? `Incluir ${fmtI.format(n)} ${n === 1 ? 'item' : 'itens'} no ciclo ${c.id} (aberto)`
+    : `Aplicar ${fmtI.format(n)} ${n === 1 ? 'item' : 'itens'} ao ciclo ${c ? c.id : proximoId()}`;
+  const m = marcaveis();
+  $('selTodos').checked = m.length > 0 && m.every(p => SEL.has(p.cdpro));
+  $('selTodos').indeterminate = !$('selTodos').checked && m.some(p => SEL.has(p.cdpro));
+  $('selTodos').disabled = !m.length;
+  $('selTodos').hidden = !PERM.ajusta;
+}
+function aplicarAoCiclo() {
+  let c = cicloAtual();
+  if (!c) { c = {id: proximoId(), status: 'montagem', criado: new Date().toISOString(), itens: {}, emails: []}; CICLOS.push(c); }
+  const agora = new Date().toISOString(), novos = [];
+  SEL.forEach(cd => { if (!c.itens[cd]) { c.itens[cd] = {em: agora, apos: c.status === 'aberto'}; novos.push(cd); } });
+  if (c.status === 'aberto') avisarFornecedores(c, novos, agora);
+  SEL.clear(); salvarCICLOS();
+  $('msgCopia').textContent = `${fmtI.format(novos.length)} ${novos.length === 1 ? 'item entrou' : 'itens entraram'} no ciclo ${c.id}${c.status === 'aberto' ? ' depois da abertura; aviso por e-mail registrado para os fornecedores' : ''}.`;
+  tabela();
+}
+// item incluído com o ciclo aberto: um e-mail por fornecedor com acesso liberado (na simulação, só fica registrado)
+function avisarFornecedores(c, cds, em) {
+  const porForn = {};
+  cds.forEach(cd => { const p = prods.find(x => x.cdpro === +cd); (porForn[p.cdfnr || ''] ||= []).push(p); });
+  Object.entries(porForn).forEach(([cn, ps]) => {
+    const para = Object.keys(LIB).filter(e => LIB[e].cnpj === cn);
+    c.emails.push({em, cnpj: cn, para, itens: ps.map(p => p.cdpro),
+      assunto: `Ciclo ${c.id}: ${ps.length === 1 ? 'item adicionado' : ps.length + ' itens adicionados'} à cotação da Medicinal`});
+  });
+}
+let confirmaCiclo = '';
+function ciclo() {
+  const c = cicloAtual() || CICLOS[CICLOS.length - 1];
+  const acoes = $('cicloAcoes');
+  if (!c) {
+    $('cicloTitulo').innerHTML = `Ciclo ${proximoId()} <span class="st montagem">ainda vazio</span>`;
+    $('cicloDatas').textContent = ''; $('cicloKpis').innerHTML = ''; $('cicloApos').hidden = true; $('cicloEmails').hidden = true;
+    acoes.innerHTML = '';
+    $('linhasCiclo').innerHTML = '<tr><td colspan="9" class="mut">Na Lista de compras, filtre os itens, marque (o quadradinho do cabeçalho marca todos do filtro), desmarque o que não deve entrar e clique em "Aplicar ao ciclo". Repita com outros filtros até montar o ciclo.</td></tr>';
+    $('cicloHist').textContent = '';
+    return;
+  }
+  const ps = Object.keys(c.itens).map(cd => prods.find(p => p.cdpro === +cd)).filter(Boolean);
+  const q = p => c.status === 'travado' ? c.itens[p.cdpro].qtd : p.qtdF;
+  const total = ps.reduce((s, p) => s + p.prcomn * q(p), 0);
+  const apos = ps.filter(p => c.itens[p.cdpro].apos);
+  $('cicloTitulo').innerHTML = `Ciclo ${c.id} <span class="st ${c.status}">${NOME_ST[c.status]}</span>`;
+  $('cicloDatas').innerHTML = `<span>Criado ${fmtD(c.criado)}</span><span>Aberto ${fmtD(c.aberto)}</span><span>Travado ${fmtD(c.travado)}</span>`;
+  $('cicloKpis').innerHTML = [['Itens', ps.length], ['Valor', fmtR.format(total)], ['Fornecedores', new Set(ps.map(p => p.cdfnr || '?')).size],
+    ['Incluídos após a abertura', apos.length], ['E-mails de inclusão', c.emails.length]]
+    .map(([a, b]) => `<div class="kpi"><small>${a}</small><b>${typeof b === 'number' ? fmtI.format(b) : b}</b></div>`).join('');
+  const conf = (acao, txt, txtConf) => `<button class="${acao === 'travar' ? 'sec perigo' : ''}" data-ciclo="${acao}">${confirmaCiclo === acao ? txtConf : txt}</button>`;
+  acoes.innerHTML = c.status === 'montagem' ? conf('lancar', `Lançar ciclo ${c.id}`, 'Confirmar: abrir a cotação aos fornecedores')
+    : c.status === 'aberto' ? conf('travar', `Travar ciclo ${c.id}`, 'Confirmar: travar (não aceita mais itens)') : '';
+  $('cicloApos').hidden = !apos.length;
+  $('cicloApos').innerHTML = `<h3>Adicionados após a abertura do ciclo (${apos.length})</h3><ul>${apos.map(p => `<li><b>${esc(p.descr)}</b> (${p.cdpro}) · ${fmtI.format(q(p))} ${esc(p.unida)} · entrou em ${fmtD(c.itens[p.cdpro].em)}</li>`).join('')}</ul>`;
+  $('cicloEmails').hidden = !c.emails.length;
+  $('cicloEmails').innerHTML = `<h3>E-mails aos fornecedores sobre itens incluídos <span class="mut" style="font-weight:400">(na simulação ficam só registrados; o envio entra com o n8n)</span></h3><ul>${c.emails.map(m => `<li>${fmtD(m.em)} · <b>${esc(fornNome(m.cnpj))}</b> · "${esc(m.assunto)}" · ${m.para.length ? 'para ' + m.para.map(esc).join(', ') : '<span class="chip warn">não enviado: fornecedor sem acesso liberado</span>'}</li>`).join('')}</ul>`;
+  $('linhasCiclo').innerHTML = ps.sort((a, b) => b.prcomn * q(b) - a.prcomn * q(a)).map(p => `<tr class="${p.lista <= 3 ? 'l' + p.lista : ''}">
+    <td>${p.cdpro}</td><td class="desc">${esc(p.descr)}</td><td>${importancia(p.lista)}</td>
+    <td class="r"><b>${fmtI.format(q(p))}</b> ${esc(p.unida)}</td><td class="r">${p.prcomn ? fmtR.format(p.prcomn) : '–'}</td>
+    <td class="r">${fmtR.format(p.prcomn * q(p))}</td><td title="${esc(fornTitulo(p.cdfnr))}">${esc(p.forn)}</td>
+    <td>${fmtD(c.itens[p.cdpro].em)}${c.itens[p.cdpro].apos ? ' <span class="chip warn">após abertura</span>' : ''}</td>
+    <td>${c.status === 'montagem' ? `<button class="sec mini" data-tirar="${p.cdpro}">tirar</button>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="9" class="mut">Ciclo sem itens.</td></tr>';
+  const ant = CICLOS.filter(x => x !== c);
+  $('cicloHist').textContent = ant.length ? 'Ciclos anteriores: ' + ant.map(x => `ciclo ${x.id} (${NOME_ST[x.status]}, ${Object.keys(x.itens).length} itens)`).join(' · ') : '';
+}
+$('cicloAcoes').addEventListener('click', e => {
+  const b = e.target.closest('button[data-ciclo]'); if (!b) return;
+  const c = cicloAtual(), a = b.dataset.ciclo;
+  if (confirmaCiclo !== a) { confirmaCiclo = a; ciclo(); setTimeout(() => { confirmaCiclo = ''; if (!$('sec-ciclo').hidden) ciclo(); }, 5000); return; }
+  confirmaCiclo = '';
+  if (a === 'lancar') { c.status = 'aberto'; c.aberto = new Date().toISOString(); }
+  if (a === 'travar') { c.status = 'travado'; c.travado = new Date().toISOString();
+    Object.keys(c.itens).forEach(cd => { c.itens[cd].qtd = prods.find(p => p.cdpro === +cd)?.qtdF ?? 0; }); }
+  salvarCICLOS(); ciclo(); kpis();
+});
+$('linhasCiclo').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tirar]'); if (!b) return;
+  delete cicloAtual().itens[b.dataset.tirar]; salvarCICLOS(); ciclo(); kpis();
+});
+$('aplicarCiclo').addEventListener('click', aplicarAoCiclo);
+$('selTodos').addEventListener('click', e => e.stopPropagation());
+$('selTodos').addEventListener('change', () => {
+  const m = marcaveis();
+  if ($('selTodos').checked) m.forEach(p => SEL.add(p.cdpro)); else m.forEach(p => SEL.delete(p.cdpro));
+  tabela();
+});
+$('linhas').addEventListener('change', e => {
+  const i = e.target.closest('input[data-sel]'); if (!i) return;
+  if (i.checked) SEL.add(+i.dataset.sel); else SEL.delete(+i.dataset.sel);
+  botaoCiclo();
+});
 
 function cadastro() {
   const itens = {};
@@ -613,8 +759,9 @@ document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('cl
 function abrir(t) {
   if (!PERM.abas.includes(t)) t = 'lista';
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  ['lista','curvas','param','regras','fornec','acessos'].forEach(s => $('sec-' + s).hidden = s !== t);
+  ['lista','curvas','ciclo','param','regras','fornec','acessos'].forEach(s => $('sec-' + s).hidden = s !== t);
   if (t === 'fornec') cadastro();
+  if (t === 'ciclo') ciclo();
   document.body.classList.toggle('app', t === 'lista');
   try { localStorage.setItem('compras.aba', t); } catch (e) {}
 }
