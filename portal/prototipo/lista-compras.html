@@ -9,6 +9,7 @@
   --ok:#1f7a4d; --okbg:#e5f3ec; --warn:#a15a10; --warnbg:#fbf0e2; --err:#b3261e; --errbg:#fbe9e7;
   --shadow:0 1px 2px rgba(20,25,31,.06),0 8px 24px rgba(20,25,31,.06); --radius:14px;
   --heat:#e0613a;
+  --l1bg:#fbe39a; --l2bg:#fdefc4; --l3bg:#fef8e6; --imp:#c48a00; --impoff:#e3e7eb;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1418; --card:#171e24; --ink:#e6ebef; --mut:#93a0ab; --line:#2a343d;
@@ -16,6 +17,7 @@
   --ok:#5fc08f; --okbg:#173327; --warn:#e2a35c; --warnbg:#3a2a17; --err:#f08a80; --errbg:#3d1d1a;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
   --heat:#ff7a52;
+  --l1bg:#4d4117; --l2bg:#3a3219; --l3bg:#2a2619; --imp:#f0c64a; --impoff:#33404a;
 }}
 :root[data-theme="dark"]{
   --bg:#0f1418; --card:#171e24; --ink:#e6ebef; --mut:#93a0ab; --line:#2a343d;
@@ -23,6 +25,7 @@
   --ok:#5fc08f; --okbg:#173327; --warn:#e2a35c; --warnbg:#3a2a17; --err:#f08a80; --errbg:#3d1d1a;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
   --heat:#ff7a52;
+  --l1bg:#4d4117; --l2bg:#3a3219; --l3bg:#2a2619; --imp:#f0c64a; --impoff:#33404a;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -68,6 +71,14 @@ table.tbl{border-collapse:separate; border-spacing:0; width:100%; font-size:12.5
 .tbl td{padding:4px 8px; border-bottom:1px solid var(--line); white-space:nowrap}
 .tbl td.desc{white-space:normal; min-width:150px; max-width:240px; line-height:1.25}
 .tbl tr.compra td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+/* importância da lista: linha pintada (1 forte, 2 médio, 3 fraco) e barra crescente */
+.tbl tr.l1 td{background:var(--l1bg)} .tbl tr.l2 td{background:var(--l2bg)} .tbl tr.l3 td{background:var(--l3bg)}
+.imp{display:inline-flex; align-items:flex-end; gap:2px; height:13px; vertical-align:-1px}
+.imp i{width:4px; border-radius:1px; background:var(--impoff)}
+.imp i:nth-child(1){height:5px} .imp i:nth-child(2){height:7px} .imp i:nth-child(3){height:9px} .imp i:nth-child(4){height:11px} .imp i:nth-child(5){height:13px}
+.imp i.on{background:var(--imp)}
+.imp b{font-size:11px; color:var(--mut); margin-left:5px; font-weight:600}
+.sem-curvas .tbl tr > :nth-child(4){display:none}
 .chip{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--soft); color:var(--ink)}
 .chip.ok{background:var(--okbg); color:var(--ok)} .chip.warn{background:var(--warnbg); color:var(--warn)} .chip.err{background:var(--errbg); color:var(--err)}
 .curvas{display:inline-flex; gap:2px}
@@ -174,7 +185,7 @@ button.perigo{color:var(--err)}
     <div class="tw"><table class="tbl" id="tbl"><thead><tr>
       <th data-k="cdpro">Cód.</th>
       <th data-k="descr">Descrição</th>
-      <th data-k="lista" class="r">Lista</th>
+      <th data-k="lista" title="Importância: Lista 1 (5 barras, essencial) até Lista 5 (1 barra). Linhas das listas 1, 2 e 3 em amarelo, do mais forte ao mais fraco.">Lista</th>
       <th data-k="nota" title="Financeiro · Físico · Frequência (90 dias)">Curvas<br>(F-Fi-Fr)</th>
       <th data-k="e1" class="r">Estoque F1</th>
       <th data-k="e2" class="r">Estoque F2</th>
@@ -221,6 +232,7 @@ button.perigo{color:var(--err)}
     <div class="tw" style="max-height:none"><table class="perm">
       <tr><th>O que pode</th><th>Administrador</th><th>Comprador</th><th>Produção</th><th>Fornecedor</th></tr>
       <tr><td>Ver a lista de compras com estoque, Consumo30D, DiasConsumo e curvas</td><td class="s">sim</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td></tr>
+      <tr><td>Ver as curvas ABC (F-Fi-Fr) e a aba Curvas e listas</td><td class="s">sim</td><td class="n">não</td><td class="s">sim</td><td class="n">não</td></tr>
       <tr><td>Ver preço de compra, valor do pedido e impacto</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Ajustar quantidades do pedido</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Alterar parâmetros (limites de DiasConsumo, cortes das curvas, peso)</td><td class="s">sim</td><td class="n">só vê</td><td class="n">não</td><td class="n">não</td></tr>
@@ -269,10 +281,10 @@ prods.forEach(p => p.forn = fornNome(p.cdfnr));
 
 // perfis de acesso (simulados aqui; no portal vêm do login)
 const PERFIS = {
-  admin:      {abas:['lista','curvas','param','regras','acessos'], internos:true,  valores:true,  ajusta:true,  param:true},
-  comprador:  {abas:['lista','curvas','param','regras'],           internos:true,  valores:true,  ajusta:true,  param:false},
-  producao:   {abas:['lista','curvas','regras'],                   internos:true,  valores:false, ajusta:false, param:false},
-  fornecedor: {abas:['lista'],                                     internos:false, valores:false, ajusta:false, param:false, forn:true},
+  admin:      {abas:['lista','curvas','param','regras','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
+  comprador:  {abas:['lista','param','regras'],                    internos:true,  valores:true,  ajusta:true,  param:false, curvas:false},
+  producao:   {abas:['lista','curvas','regras'],                   internos:true,  valores:false, ajusta:false, param:false, curvas:true},
+  fornecedor: {abas:['lista'],                                     internos:false, valores:false, ajusta:false, param:false, curvas:false, forn:true},
 };
 let perfil = 'admin', PERM = PERFIS.admin, fornSel = '';
 try { perfil = localStorage.getItem('compras.perfil') || 'admin'; if (!PERFIS[perfil]) perfil = 'admin'; } catch (e) {}
@@ -398,14 +410,17 @@ function filtrar() {
     return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir || a.cdpro - b.cdpro;
   });
 }
+// lista em barras: 5 barras crescentes, acesas conforme a importância (Lista 1 = 5 acesas, Lista 5 = 1)
+const NOME_LISTA = {1:'essencial', 2:'alta', 3:'média', 4:'baixa', 5:'mínima'};
+const importancia = l => `<span class="imp" title="Lista ${l} · importância ${NOME_LISTA[l]}">${[1,2,3,4,5].map(i => `<i class="${i <= 6 - l ? 'on' : ''}"></i>`).join('')}<b>${l}</b></span>`;
 const cob = (v, lim) => v === null ? '<span class="chip">sem consumo</span>'
   : `<span class="chip ${v <= lim ? 'err' : v <= lim * 2 ? 'warn' : 'ok'}">${fmtI.format(v)} d</span>`;
 function tabela() {
   kpis();
-  const linhas = filtrados.slice(0, limite).map(p => `<tr data-cd="${p.cdpro}" class="${p.qtdF > 0 ? 'compra' : ''}${p.ajustado ? ' ajust' : ''}">
+  const linhas = filtrados.slice(0, limite).map(p => `<tr data-cd="${p.cdpro}" class="${p.qtdF > 0 ? 'compra' : ''}${p.ajustado ? ' ajust' : ''}${p.lista <= 3 ? ' l' + p.lista : ''}">
     <td>${p.cdpro}</td>
     <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
-    <td class="r">${p.lista}</td>
+    <td>${importancia(p.lista)}</td>
     <td><span class="curvas">${[p.nf, p.nfi, p.nq].map(n => `<i class="c${'CBA'[n - 1]}">${'CBA'[n - 1]}</i>`).join('')}</span></td>
     <td class="r">${fmtN.format(p.e1)}</td><td class="r">${fmtN.format(p.e2)}</td>
     <td class="r">${fmtM(p.media * 30)} ${esc(p.unida)}</td>
@@ -467,6 +482,7 @@ function aplicarPerfil() {
   $('perfil').value = perfil;
   document.body.classList.toggle('sem-int', !PERM.internos);
   document.body.classList.toggle('sem-val', !PERM.valores);
+  document.body.classList.toggle('sem-curvas', !PERM.curvas);
   document.body.classList.toggle('so-forn', !!PERM.forn);
   document.querySelectorAll('nav.tabs button').forEach(b => b.hidden = !PERM.abas.includes(b.dataset.tab));
   Object.keys(CAMPOS).forEach(id => $(id).disabled = !PERM.param);
@@ -545,11 +561,11 @@ $('copiar').addEventListener('click', async () => {
   const n = v => v === null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
   const COL = [  // [cabeçalho, valor, grupo]  grupo: b = todos, i = dados internos, v = valores
     ['Código', p => p.cdpro, 'b'], ['Descrição', p => p.descr, 'b'], ['Unidade', p => p.unida, 'b'],
-    ['Lista', p => p.lista, 'i'], ['Curva fin.', p => 'CBA'[p.nf - 1], 'i'], ['Curva fís.', p => 'CBA'[p.nfi - 1], 'i'], ['Curva freq.', p => 'CBA'[p.nq - 1], 'i'],
+    ['Lista', p => p.lista, 'i'], ['Curva fin.', p => 'CBA'[p.nf - 1], 'c'], ['Curva fís.', p => 'CBA'[p.nfi - 1], 'c'], ['Curva freq.', p => 'CBA'[p.nq - 1], 'c'],
     ['Estoque F1', p => n(p.e1), 'i'], ['Estoque F2', p => n(p.e2), 'i'], ['Consumo30D', p => n(p.media * 30), 'i'], ['DiasConsumo (F1+F2)', p => n(p.dg), 'i'], ['DiasConsumo (F2)', p => n(p.d2), 'i'],
     ['Qtd sugerida', p => p.qtd, 'i'], ['Qtd pedido', p => p.qtdF, 'b'],
     ['Preço compra', p => n(p.prcomn), 'v'], ['Total', p => n(p.total), 'v'], ['Impacto no pedido (%)', p => p.total ? n(p.impacto * 100) : '', 'v'], ['Último fornecedor', p => p.forn, 'v'], ['CNPJ do fornecedor', p => cnpj(p.cdfnr), 'v'],
-  ].filter(([, , g]) => g === 'b' || (g === 'i' && PERM.internos) || (g === 'v' && PERM.valores));
+  ].filter(([, , g]) => g === 'b' || (g === 'i' && PERM.internos) || (g === 'c' && PERM.curvas) || (g === 'v' && PERM.valores));
   const txt = [COL.map(c => c[0]).join('\t'), ...filtrados.map(p => COL.map(c => c[1](p)).join('\t'))].join('\n');
   try { await navigator.clipboard.writeText(txt); $('msgCopia').textContent = `${fmtI.format(filtrados.length)} linhas copiadas. Cole no Excel.`; }
   catch (e) { $('msgCopia').textContent = 'O navegador bloqueou a cópia. Tente pelo app no computador.'; }
