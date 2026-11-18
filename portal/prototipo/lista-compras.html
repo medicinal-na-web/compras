@@ -25,44 +25,47 @@
   --heat:#ff7a52;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.45}
 body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--card)}
 h1,h2,h3,p{margin:0}
 .wrap,.topin{max-width:1240px; margin:0 auto; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{padding-block:18px 64px; display:flex; flex-direction:column; gap:14px}
+.wrap{padding-block:10px 16px; display:flex; flex-direction:column; gap:10px}
 header.top{background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:env(safe-area-inset-top,0px); z-index:5}
-.topin{padding-block:12px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+.topin{padding-block:8px; display:flex; gap:8px 14px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+.topin.k{padding-block:0 8px; display:block}
 .brand{display:flex; align-items:center; gap:10px}
 .dot{width:10px; height:10px; border-radius:50%; background:var(--brand); flex:none}
-.brand b{font-size:17px; display:block}
-.brand span{font-size:12px; color:var(--mut); display:block}
+.brand b{font-size:16px; display:block; line-height:1.2}
+.brand span{font-size:11px; color:var(--mut); display:block}
 .pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--warnbg); color:var(--warn); white-space:nowrap}
 .mut{color:var(--mut)} .num,td{font-variant-numeric:tabular-nums}
 button{font:inherit; font-size:14px; font-weight:600; padding:9px 14px; border:0; border-radius:10px; background:var(--brand); color:#fff; cursor:pointer}
 button.sec{background:var(--card); color:var(--brand); border:1px solid var(--line)}
-button.mini{font-size:12px; padding:6px 10px}
+button.mini{font-size:12px; padding:5px 9px; border-radius:8px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand2); outline-offset:1px}
 nav.tabs{display:flex; gap:6px; flex-wrap:wrap}
-nav.tabs button{background:var(--card); color:var(--ink); border:1px solid var(--line)}
+nav.tabs button{background:var(--card); color:var(--ink); border:1px solid var(--line); font-size:13px; padding:6px 12px; border-radius:8px}
 nav.tabs button[aria-selected="true"]{background:var(--brand); color:#fff; border-color:var(--brand)}
-.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px}
-.kpi{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:2px}
-.kpi small{color:var(--mut); font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase}
-.kpi b{font-size:24px; font-variant-numeric:tabular-nums}
-.kpi span{font-size:12px; color:var(--mut)}
-.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:6px}
+.kpi{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:5px 10px; display:flex; flex-direction:column; min-width:0}
+.kpi small{color:var(--mut); font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.kpi b{font-size:17px; line-height:1.25; font-variant-numeric:tabular-nums; white-space:nowrap}
+.kpi span{font-size:11px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px; display:flex; flex-direction:column; gap:8px; min-width:0}
 .card h2{font-size:16px}
-.filtros{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; align-items:end}
-label{display:block; font-size:13px; color:var(--mut); margin-bottom:5px; font-weight:600}
-input,select{width:100%; font:inherit; font-size:14px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:var(--field); color:var(--ink)}
+.filtros{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; align-items:end}
+label{display:block; font-size:11.5px; color:var(--mut); margin-bottom:3px; font-weight:600}
+input,select{width:100%; font:inherit; font-size:13px; padding:6px 9px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink)}
 .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.tw{overflow-x:auto; border:1px solid var(--line); border-radius:10px}
-table.tbl{border-collapse:collapse; width:100%; font-size:13px}
-.tbl th{position:sticky; top:0; background:var(--soft); text-align:left; font-size:12px; color:var(--mut); font-weight:700; padding:8px 10px; white-space:nowrap; cursor:pointer; user-select:none}
+/* a tabela rola por dentro: o cabeçalho das colunas fica fixo logo abaixo do cabeçalho da página */
+.tw{overflow:auto; max-height:calc(100dvh - var(--hdr, 130px) - 20px); border:1px solid var(--line); border-radius:10px}
+table.tbl{border-collapse:separate; border-spacing:0; width:100%; font-size:12.5px}
+.tbl th{position:sticky; top:0; z-index:2; background:var(--soft); text-align:left; font-size:11.5px; color:var(--mut); font-weight:700; padding:6px 8px; white-space:nowrap; cursor:pointer; user-select:none; border-bottom:1px solid var(--line)}
 .tbl th.r,.tbl td.r{text-align:right}
 .tbl th[aria-sort="ascending"]::after{content:" ▲"} .tbl th[aria-sort="descending"]::after{content:" ▼"}
-.tbl td{padding:7px 10px; border-top:1px solid var(--line); white-space:nowrap}
-.tbl td.desc{white-space:normal; min-width:200px}
+.tbl td{padding:4px 8px; border-bottom:1px solid var(--line); white-space:nowrap}
+.tbl td.desc{white-space:normal; min-width:150px; max-width:240px; line-height:1.25}
 .tbl tr.compra td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
 .chip{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--soft); color:var(--ink)}
 .chip.ok{background:var(--okbg); color:var(--ok)} .chip.warn{background:var(--warnbg); color:var(--warn)} .chip.err{background:var(--errbg); color:var(--err)}
@@ -71,21 +74,21 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
 .cA{background:var(--okbg); color:var(--ok)} .cB{background:var(--warnbg); color:var(--warn)} .cC{background:var(--soft); color:var(--mut)}
 .tbl td.heat{font-weight:700; min-width:96px}
 .tbl td.heat i{font-style:normal; font-weight:600; font-size:11px; color:var(--mut); margin-left:4px}
-.legenda{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--mut)}
+.legenda{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--mut); flex-wrap:wrap}
 .legenda .barra{width:120px; height:10px; border-radius:5px; background:linear-gradient(90deg, color-mix(in srgb, var(--heat) 4%, transparent), color-mix(in srgb, var(--heat) 60%, transparent)); border:1px solid var(--line)}
 .qed{display:inline-flex; align-items:stretch; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--field)}
-.qed button{padding:4px 10px; border-radius:0; background:var(--soft); color:var(--ink); font-size:15px; line-height:1}
+.qed button{padding:2px 8px; border-radius:0; background:var(--soft); color:var(--ink); font-size:14px; line-height:1}
 .qed button:hover{background:var(--line)}
-.qed input{width:84px; text-align:right; border:0; border-radius:0; padding:5px 6px; font-weight:700; font-variant-numeric:tabular-nums; background:transparent}
-.qsug{font-size:11px; color:var(--mut); margin-top:3px}
+.qed input{width:70px; text-align:right; border:0; border-radius:0; padding:3px 5px; font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; background:transparent}
+.qsug{font-size:10.5px; color:var(--mut); margin-top:1px; line-height:1.2}
 .qsug button{font-size:11px; padding:0; background:none; color:var(--brand); text-decoration:underline; font-weight:600}
 tr.ajust .qed{border-color:var(--brand2); box-shadow:0 0 0 1px var(--brand2)}
 tr.ajust .qed input{color:var(--brand)}
 button.perigo{color:var(--err)}
 .ctl{font-size:11px; font-weight:700; color:var(--err); margin-left:6px}
-.cobfiltro{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding-top:12px; border-top:1px dashed var(--line)}
+.cobfiltro{display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; padding-top:8px; border-top:1px dashed var(--line)}
 .cobfiltro .ctipo{flex:1 1 240px; max-width:320px} .cobfiltro .cdias{flex:0 1 120px}
-.cobfiltro #atalhos{padding-bottom:4px}
+.cobfiltro #atalhos{padding-bottom:2px; gap:4px}
 .params{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px}
 .params p{font-size:12px; color:var(--mut); margin-top:4px}
 .matriz{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px}
@@ -95,24 +98,35 @@ button.perigo{color:var(--err)}
 .regras{display:grid; gap:10px; max-width:72ch}
 .regras li{margin-bottom:6px}
 .msg{font-size:13px; color:var(--ok); min-height:18px}
-@media (max-width:560px){ .kpi b{font-size:20px} }
+/* na aba Lista, a página vira um app de uma tela: filtros em cima e a tabela ocupa o resto, rolando por dentro */
+@media (min-width:701px){
+  body.app .wrap{height:calc(100dvh - var(--hdr, 130px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))}
+  body.app #sec-lista{flex:1; min-height:0}
+  body.app #sec-lista .tw{flex:1; min-height:0; max-height:none}
+}
+@media (max-width:700px){
+  .kpis{grid-auto-flow:column; grid-template-columns:none; grid-auto-columns:minmax(140px,1fr); overflow-x:auto}
+  nav.tabs{flex-wrap:nowrap; overflow-x:auto; max-width:100%} nav.tabs button{white-space:nowrap}
+  .brand span,.pill{display:none}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <header class="top"><div class="topin">
   <div class="brand"><i class="dot"></i><div><b>Portal de Compras</b><span>Lista de compras · FórmulaCerta · grupo M, setor 001</span></div></div>
-  <span class="pill" title="Os dados vêm do arquivo LISTADECOMPRAS.V7.pbix. Assim que a carga do n8n estiver ativa, a página passa a ler o Supabase.">Protótipo · dados do snapshot do Power BI</span>
-</div></header>
-
-<main class="wrap">
   <nav class="tabs" role="tablist">
     <button role="tab" id="tab-lista" aria-selected="true" data-tab="lista">Lista de compras</button>
     <button role="tab" id="tab-curvas" aria-selected="false" data-tab="curvas">Curvas e listas</button>
     <button role="tab" id="tab-param" aria-selected="false" data-tab="param">Parâmetros</button>
     <button role="tab" id="tab-regras" aria-selected="false" data-tab="regras">Como é calculado</button>
   </nav>
+  <span class="pill" title="Os dados vêm do arquivo LISTADECOMPRAS.V7.pbix. Assim que a carga do n8n estiver ativa, a página passa a ler o Supabase.">Protótipo · snapshot do Power BI</span>
+</div>
+<div class="topin k"><div class="kpis" id="kpis" aria-live="polite"></div></div>
+</header>
 
-  <div class="kpis" id="kpis"></div>
+<main class="wrap">
+
 
   <section id="sec-lista" class="card">
     <div class="filtros">
@@ -131,8 +145,8 @@ button.perigo{color:var(--err)}
       </div>
     </div>
     <div class="row" style="justify-content:space-between">
-      <div style="display:flex; flex-direction:column; gap:4px; min-width:0">
-        <p class="mut" id="conta"></p>
+      <div class="row" style="gap:4px 16px; min-width:0; flex:1">
+        <p class="mut" id="conta" style="font-size:13px"></p>
         <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
       </div>
       <div class="row"><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
@@ -152,7 +166,7 @@ button.perigo{color:var(--err)}
       <th data-k="total" class="r" aria-sort="descending">Total</th>
       <th data-k="impacto" class="r" title="Participação do item no valor sugerido dos indicados na tela">Impacto no pedido</th>
     </tr></thead><tbody id="linhas"></tbody></table></div>
-    <div class="row"><button class="sec" id="mais" hidden>Mostrar mais 200</button></div>
+    <div class="row"><button class="sec mini" id="mais" hidden>Mostrar mais 200</button></div>
   </section>
 
   <section id="sec-curvas" class="card" hidden>
@@ -332,7 +346,7 @@ function tabela() {
     <td class="r">${fmtM(p.media)} ${esc(p.unida)}</td>
     <td class="r">${cob(p.dg, P.cobGeral)}</td><td class="r">${cob(p.d2, P.cobF2)}</td>
     <td class="r"><div class="qed"><button data-acao="-" aria-label="Baixar ${fmtI.format(p.passo)}" title="−${fmtI.format(p.passo)}">−</button><input data-acao="v" inputmode="numeric" value="${p.qtdF}" aria-label="Quantidade de ${esc(p.descr)}"><button data-acao="+" aria-label="Subir ${fmtI.format(p.passo)}" title="+${fmtI.format(p.passo)}">+</button></div>
-      <div class="qsug">${p.ajustado ? `sugerido ${fmtI.format(p.qtd)} · <button data-acao="r">desfazer</button>` : `passo ${fmtI.format(p.passo)}`}</div></td>
+      ${p.ajustado ? `<div class="qsug">sug. ${fmtI.format(p.qtd)} · <button data-acao="r">desfazer</button></div>` : ''}</td>
     <td class="r">${p.prcomn ? fmtR.format(p.prcomn) : '<span class="chip warn">sem preço</span>'}</td>
     <td class="r">${p.total ? fmtR.format(p.total) : '–'}</td>
     ${calor(p)}</tr>`).join('');
@@ -373,9 +387,12 @@ document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('cl
 function abrir(t) {
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   ['lista','curvas','param','regras'].forEach(s => $('sec-' + s).hidden = s !== t);
+  document.body.classList.toggle('app', t === 'lista');
   try { localStorage.setItem('compras.aba', t); } catch (e) {}
 }
-try { const a = localStorage.getItem('compras.aba'); if (a) abrir(a); } catch (e) {}
+let abaInicial = 'lista';
+try { abaInicial = localStorage.getItem('compras.aba') || 'lista'; } catch (e) {}
+abrir(abaInicial);
 
 // filtros e ordenação
 ['fBusca','fIndica','fLista','fCtrl','fSitua','fCobTipo','fCobMin','fCobMax'].forEach(id => $(id).addEventListener('input', () => { limite = 200; filtrar(); tabela(); }));
@@ -434,5 +451,9 @@ $('copiar').addEventListener('click', async () => {
   catch (e) { $('msgCopia').textContent = 'O navegador bloqueou a cópia. Tente pelo app no computador.'; }
 });
 
+const hdr = document.querySelector('header.top');
+const medir = () => document.documentElement.style.setProperty('--hdr', hdr.offsetHeight + 'px');
+try { new ResizeObserver(medir).observe(hdr); } catch (e) { addEventListener('resize', medir); }
+medir();
 mostrarParam(); tudo();
 </script>
