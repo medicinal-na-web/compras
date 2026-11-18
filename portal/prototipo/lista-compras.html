@@ -78,7 +78,14 @@ table.tbl{border-collapse:separate; border-spacing:0; width:100%; font-size:12.5
 .imp i:nth-child(1){height:5px} .imp i:nth-child(2){height:7px} .imp i:nth-child(3){height:9px} .imp i:nth-child(4){height:11px} .imp i:nth-child(5){height:13px}
 .imp i.on{background:var(--imp)}
 .imp b{font-size:11px; color:var(--mut); margin-left:5px; font-weight:600}
-.sem-curvas .tbl tr > :nth-child(4){display:none}
+.sem-curvas #tbl tr > :nth-child(4){display:none}
+/* cotação do fornecedor: tabela própria no lugar da lista */
+#twForn{display:none} .so-forn #twForn{display:block} .so-forn #twMain{display:none}
+.cot{display:flex; align-items:center; gap:4px; justify-content:flex-end}
+.cot input{width:96px; text-align:right; padding:4px 6px; font-weight:700}
+.cot input.min{width:80px; font-weight:600}
+.cot button{font-size:11px; padding:4px 7px; border-radius:6px}
+#tblForn td.desc{max-width:none; min-width:220px}
 .chip{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--soft); color:var(--ink)}
 .chip.ok{background:var(--okbg); color:var(--ok)} .chip.warn{background:var(--warnbg); color:var(--warn)} .chip.err{background:var(--errbg); color:var(--err)}
 .curvas{display:inline-flex; gap:2px}
@@ -102,8 +109,8 @@ button.perigo{color:var(--err)}
 .aviso{background:var(--soft); border-radius:10px; padding:8px 12px; font-size:13px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center}
 .aviso select{width:auto}
 /* colunas por perfil: 3-9 = dados internos (lista, curvas, estoque, Consumo30D, DiasConsumo); 11-14 = valores e fornecedor */
-.sem-int .tbl tr > :nth-child(n+3):nth-child(-n+9){display:none}
-.sem-val .tbl tr > :nth-child(n+11){display:none}
+.sem-int #tbl tr > :nth-child(n+3):nth-child(-n+9){display:none}
+.sem-val #tbl tr > :nth-child(n+11){display:none}
 .so-forn .filtros, .so-forn .cobfiltro, .sem-val .legenda, .sem-val .val{display:none}
 .perm{border-collapse:collapse; width:100%; font-size:13px}
 .perm th,.perm td{border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top}
@@ -134,6 +141,7 @@ button.perigo{color:var(--err)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<style id="colsPerfil"></style>
 
 <header class="top"><div class="topin">
   <div class="brand"><i class="dot"></i><div><b>Portal de Compras <em class="proto" title="Os dados vêm do arquivo LISTADECOMPRAS.V7.pbix. Assim que a carga do n8n estiver ativa, a página passa a ler o Supabase.">protótipo</em></b><span>FórmulaCerta · grupo M, setor 001 · <em class="proto" title="Os dados vêm do arquivo LISTADECOMPRAS.V7.pbix. Assim que a carga do n8n estiver ativa, a página passa a ler o Supabase.">protótipo com snapshot do Power BI</em></span></div></div>
@@ -155,9 +163,10 @@ button.perigo{color:var(--err)}
 
   <section id="sec-lista" class="card">
     <div class="aviso" id="avisoForn" hidden>
-      <span>Pedido da Medicinal para o fornecedor</span>
+      <span><b>Cotação</b> da Medicinal para</span>
       <select id="fornSim" aria-label="Fornecedor (simulação)"></select>
-      <span class="mut">Na simulação você escolhe o fornecedor; no portal, ele vê só o próprio pedido.</span>
+      <select id="fornEscopo" aria-label="Itens"><option value="meus" selected>Itens que ele costuma fornecer</option><option value="todos">Todos os itens do pedido</option></select>
+      <span class="mut">Informe o preço por unidade e a quantidade mínima de venda. Depois do primeiro preço, só é possível reduzir. Na simulação, o preço a vencer é o último preço de compra.</span>
     </div>
     <div class="filtros">
       <div><label for="fBusca">Buscar (código ou descrição)</label><input id="fBusca" placeholder="ex.: 10928, pullulan"></div>
@@ -182,7 +191,11 @@ button.perigo{color:var(--err)}
       </div>
       <div class="row"><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
-    <div class="tw"><table class="tbl" id="tbl"><thead><tr>
+    <div class="tw" id="twForn"><table class="tbl" id="tblForn"><thead><tr>
+      <th>Descrição</th><th class="r">Quantidade</th><th class="r" title="Menor quantidade que você vende deste item">Qtd. mínima</th>
+      <th class="r">Preço por unidade</th><th class="r">Total</th><th title="Quem tem a menor cotação. Some depois que você reduz o preço.">Quem ganha</th>
+    </tr></thead><tbody id="linhasForn"></tbody></table></div>
+    <div class="tw" id="twMain"><table class="tbl" id="tbl"><thead><tr>
       <th data-k="cdpro">Cód.</th>
       <th data-k="descr">Descrição</th>
       <th data-k="lista" title="Importância: Lista 1 (5 barras, essencial) até Lista 5 (1 barra). Linhas das listas 1, 2 e 3 em amarelo, do mais forte ao mais fraco.">Lista</th>
@@ -236,7 +249,8 @@ button.perigo{color:var(--err)}
       <tr><td>Ver preço de compra, valor do pedido e impacto</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Ajustar quantidades do pedido</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Alterar parâmetros (limites de DiasConsumo, cortes das curvas, peso)</td><td class="s">sim</td><td class="n">só vê</td><td class="n">não</td><td class="n">não</td></tr>
-      <tr><td>Ver o pedido do próprio CNPJ (código, descrição, unidade e quantidade)</td><td class="s">todos</td><td class="s">todos</td><td class="n">não</td><td class="s">só o seu</td></tr>
+      <tr><td>Cotar os itens do pedido: preço por unidade, quantidade mínima e reduções de 5%, 10% ou valor digitado</td><td class="n">não</td><td class="n">não</td><td class="n">não</td><td class="s">sim</td></tr>
+      <tr><td>Ver se tem o menor preço (até reduzir o próprio preço; depois, só no fechamento)</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="s">sim</td></tr>
       <tr><td>Cadastrar e remover acessos</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td><td class="n">não</td></tr>
     </table></div>
     <p class="mut">Fornecedor do item = CNPJ do lote de entrada mais recente no estoque (FC03140). O nome vem do cadastro de fornecedores do FórmulaCerta (FC02000).</p>
@@ -255,6 +269,7 @@ button.perigo{color:var(--err)}
         <li><b>Indicação</b>: Listas 3–5 compram com DiasConsumo (F1+F2) até 45 (Lista 5 só se teve consumo). Listas 1–2 compram com DiasConsumo (F2) até 30; se o produto for controlado, o DiasConsumo (F1+F2) também precisa estar abaixo de 45.</li>
         <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
         <li><b>Quantidade</b> = Consumo30D, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
+        <li><b>Cotação do fornecedor</b>: ele informa o preço por unidade e a quantidade mínima. Depois do primeiro preço, só pode reduzir (−5%, −10% ou um valor menor digitado). Enquanto não reduz, vê se tem o menor preço; depois da redução, o resultado fica oculto até o fechamento. Total = preço × a maior entre a quantidade pedida e a mínima.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
     </div>
@@ -271,6 +286,13 @@ const PASSOS = [[25000, 5000], [2500, 500], [500, 50], [50, 10], [0, 1]];
 let AJ = {};   // ajustes manuais: cdpro -> quantidade (só neste navegador, por enquanto)
 try { AJ = JSON.parse(localStorage.getItem('compras.ajustes') || '{}') || {}; } catch (e) {}
 const salvarAJ = () => { try { localStorage.setItem('compras.ajustes', JSON.stringify(AJ)); } catch (e) {} };
+// cotações do fornecedor: COT[cnpj][cdpro] = {preco, min, lances, cego}. Só neste navegador, por enquanto.
+let COT = {};
+try { COT = JSON.parse(localStorage.getItem('compras.cotacoes') || '{}') || {}; } catch (e) {}
+const salvarCOT = () => { try { localStorage.setItem('compras.cotacoes', JSON.stringify(COT)); } catch (e) {} };
+const cotDe = cd => (COT[fornSel] || {})[cd] || {};
+const cotSet = (cd, v) => { (COT[fornSel] ||= {})[cd] = {...cotDe(cd), ...v}; salvarCOT(); };
+const lerNum = s => parseFloat(String(s).trim().replace(/\./g, '').replace(',', '.'));
 const LISTA_REGRA = {1:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',2:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',3:'DiasConsumo (F1+F2) ≤ 45',4:'DiasConsumo (F1+F2) ≤ 45',5:'Teve consumo e DiasConsumo (F1+F2) ≤ 45'};
 
 const prods = D.map(r => ({cdpro:r[0], descr:r[1], situa:r[2], unida:r[3], prcomn:r[4], ctrl:r[5], porta:r[6], e1:r[7], e2:r[8], f30:r[9], f90:r[10], c90:r[11], q90:r[12], cdfnr:r[13]}));
@@ -282,7 +304,8 @@ prods.forEach(p => p.forn = fornNome(p.cdfnr));
 // perfis de acesso (simulados aqui; no portal vêm do login)
 const PERFIS = {
   admin:      {abas:['lista','curvas','param','regras','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
-  comprador:  {abas:['lista','param','regras'],                    internos:true,  valores:true,  ajusta:true,  param:false, curvas:false},
+  comprador:  {abas:['lista','param','regras'],                    internos:true,  valores:true,  ajusta:true,  param:false, curvas:false,
+               ocultar:[8, 9, 14]},   // DiasConsumo (F1+F2), DiasConsumo (F2) e último fornecedor
   producao:   {abas:['lista','curvas','regras'],                   internos:true,  valores:false, ajusta:false, param:false, curvas:true},
   fornecedor: {abas:['lista'],                                     internos:false, valores:false, ajusta:false, param:false, curvas:false, forn:true},
 };
@@ -359,9 +382,13 @@ function kpis() {
   const l12 = c.filter(p => p.lista <= 2);
   const nAj = filtrados.filter(p => p.ajustado).length;
   const critico = filtrados.filter(p => p.dg !== null && p.dg <= 15).length;
+  const cotados = PERM.forn ? c.filter(p => cotDe(p.cdpro).preco != null) : [];
   const cards = PERM.forn ? [
-    ['Itens no pedido', fmtI.format(c.length), fornNome(fornSel)],
-    ['Unidades pedidas', fmtI.format(c.reduce((s, p) => s + p.qtdF, 0)), ''],
+    ['Itens na cotação', fmtI.format(c.length), fornNome(fornSel)],
+    ['Cotados', fmtI.format(cotados.length), `de ${fmtI.format(c.length)}`],
+    ['Valor cotado', fmtR.format(cotados.reduce((s, p) => s + totalCot(p), 0)), ''],
+    ['Com menor preço', fmtI.format(cotados.filter(p => statusCot(p) === 'ganha').length), 'que você ainda vê'],
+    ['Lances às cegas', fmtI.format(cotados.filter(p => cotDe(p.cdpro).cego).length), 'resultado no fechamento'],
   ] : !PERM.valores ? [
     ['Itens no pedido', fmtI.format(c.length), `de ${fmtI.format(prods.length)}`],
     ['Listas 1 e 2', fmtI.format(l12.length), ''],
@@ -391,7 +418,7 @@ function filtrar() {
   const ck = $('fCobTipo').value, cMin = parseFloat($('fCobMin').value), cMax = parseFloat($('fCobMax').value);
   const temCob = !isNaN(cMin) || !isNaN(cMax);
   filtrados = prods.filter(p =>
-    (PERM.forn ? p.cdfnr === fornSel && p.qtdF > 0 :
+    (PERM.forn ? p.qtdF > 0 && ($('fornEscopo').value === 'todos' || p.cdfnr === fornSel) :
       (ind === 'todos' || (ind === 'comprar' ? p.comprar || p.ajustado : !p.comprar && !p.ajustado)) && (!fo || p.cdfnr === fo)) &&
     (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
     (!temCob || (p[ck] !== null && (isNaN(cMin) || p[ck] >= cMin) && (isNaN(cMax) || p[ck] <= cMax))) &&
@@ -415,8 +442,56 @@ const NOME_LISTA = {1:'essencial', 2:'alta', 3:'média', 4:'baixa', 5:'mínima'}
 const importancia = l => `<span class="imp" title="Lista ${l} · importância ${NOME_LISTA[l]}">${[1,2,3,4,5].map(i => `<i class="${i <= 6 - l ? 'on' : ''}"></i>`).join('')}<b>${l}</b></span>`;
 const cob = (v, lim) => v === null ? '<span class="chip">sem consumo</span>'
   : `<span class="chip ${v <= lim ? 'err' : v <= lim * 2 ? 'warn' : 'ok'}">${fmtI.format(v)} d</span>`;
+function totalCot(p) {
+  const c = cotDe(p.cdpro);
+  return c.preco != null ? c.preco * Math.max(p.qtdF, c.min || 0) : 0;
+}
+// ganha / perde enquanto o fornecedor ainda não reduziu; depois do lance reduzido o resultado fica oculto
+function statusCot(p) {
+  const c = cotDe(p.cdpro);
+  if (c.preco == null) return 'aguarda';
+  if (c.cego) return 'cego';
+  return !p.prcomn || c.preco <= p.prcomn ? 'ganha' : 'perde';
+}
+const STATUS_COT = {
+  aguarda: '<span class="chip">aguardando seu preço</span>',
+  ganha: '<span class="chip ok">você tem o menor preço</span>',
+  perde: '<span class="chip err">existe um preço menor</span>',
+  cego: '<span class="chip" title="Depois que você reduz o preço, o resultado só aparece no fechamento da cotação.">lance enviado · resultado no fechamento</span>',
+};
+function linhasFornecedor() {
+  return filtrados.slice(0, limite).map(p => {
+    const c = cotDe(p.cdpro), un = esc(p.unida);
+    const minAcima = c.min && c.min > p.qtdF;
+    return `<tr data-cd="${p.cdpro}">
+      <td class="desc">${esc(p.descr)}${p.cdfnr === fornSel ? ' <span class="chip" title="Último lote deste item veio deste fornecedor">habitual</span>' : ''}</td>
+      <td class="r"><b>${fmtI.format(p.qtdF)}</b> ${un}</td>
+      <td class="r"><div class="cot"><input class="min" data-c="min" inputmode="decimal" value="${c.min ?? ''}" placeholder="–" aria-label="Quantidade mínima de ${esc(p.descr)}"> ${un}</div>
+        ${minAcima ? '<div class="qsug">acima do pedido: o total usa a mínima</div>' : ''}</td>
+      <td class="r"><div class="cot">${c.preco != null ? '<button class="sec" data-c="-5" title="Reduzir 5%">−5%</button><button class="sec" data-c="-10" title="Reduzir 10%">−10%</button>' : ''}
+        <input data-c="preco" inputmode="decimal" value="${c.preco != null ? String(c.preco).replace('.', ',') : ''}" placeholder="R$ / ${un}" aria-label="Preço por ${un} de ${esc(p.descr)}"></div>
+        ${c.lances > 1 ? `<div class="qsug">${c.lances} lances</div>` : ''}</td>
+      <td class="r">${c.preco != null ? fmtR.format(totalCot(p)) : '–'}</td>
+      <td>${STATUS_COT[statusCot(p)]}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="mut">Nenhum item nesta cotação.</td></tr>';
+}
+function darPreco(cd, v) {
+  const c = cotDe(cd);
+  v = Math.round(v * 10000) / 10000;
+  if (!(v > 0)) { $('msgCopia').textContent = 'Informe um preço maior que zero.'; return; }
+  if (c.preco == null) cotSet(cd, {preco: v, lances: 1});
+  else if (v < c.preco) cotSet(cd, {preco: v, lances: (c.lances || 1) + 1, cego: true});
+  else if (v > c.preco) { $('msgCopia').textContent = `Só é possível reduzir: seu preço atual é ${fmtR.format(c.preco)}.`; }
+  filtrar(); tabela();
+}
 function tabela() {
   kpis();
+  if (PERM.forn) {
+    $('linhasForn').innerHTML = linhasFornecedor();
+    $('conta').textContent = `${fmtI.format(filtrados.length)} itens` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
+    $('mais').hidden = filtrados.length <= limite; $('desfazer').hidden = true;
+    return;
+  }
   const linhas = filtrados.slice(0, limite).map(p => `<tr data-cd="${p.cdpro}" class="${p.qtdF > 0 ? 'compra' : ''}${p.ajustado ? ' ajust' : ''}${p.lista <= 3 ? ' l' + p.lista : ''}">
     <td>${p.cdpro}</td>
     <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
@@ -483,6 +558,7 @@ function aplicarPerfil() {
   document.body.classList.toggle('sem-int', !PERM.internos);
   document.body.classList.toggle('sem-val', !PERM.valores);
   document.body.classList.toggle('sem-curvas', !PERM.curvas);
+  $('colsPerfil').textContent = (PERM.ocultar || []).length ? PERM.ocultar.map(n => `#tbl tr > :nth-child(${n})`).join(',') + '{display:none}' : '';
   document.body.classList.toggle('so-forn', !!PERM.forn);
   document.querySelectorAll('nav.tabs button').forEach(b => b.hidden = !PERM.abas.includes(b.dataset.tab));
   Object.keys(CAMPOS).forEach(id => $(id).disabled = !PERM.param);
@@ -502,6 +578,23 @@ function aplicarPerfil() {
 }
 $('perfil').addEventListener('change', () => { perfil = $('perfil').value; try { localStorage.setItem('compras.perfil', perfil); } catch (e) {} aplicarPerfil(); });
 $('fornSim').addEventListener('change', () => { fornSel = $('fornSim').value; filtrar(); tabela(); });
+$('fornEscopo').addEventListener('change', () => { limite = 200; filtrar(); tabela(); });
+$('linhasForn').addEventListener('change', e => {
+  const i = e.target.closest('input[data-c]'); if (!i) return;
+  const cd = +i.closest('tr').dataset.cd, v = lerNum(i.value);
+  $('msgCopia').textContent = '';
+  if (i.dataset.c === 'min') { cotSet(cd, {min: isNaN(v) || v <= 0 ? null : v}); filtrar(); tabela(); return; }
+  if (isNaN(v)) { tabela(); return; }
+  darPreco(cd, v);
+});
+$('linhasForn').addEventListener('click', e => {
+  const b = e.target.closest('button[data-c]'); if (!b) return;
+  const cd = +b.closest('tr').dataset.cd, c = cotDe(cd);
+  $('msgCopia').textContent = '';
+  darPreco(cd, c.preco * (1 + Number(b.dataset.c) / 100));
+  document.querySelector(`#linhasForn tr[data-cd="${cd}"] button[data-c="${b.dataset.c}"]`)?.focus();
+});
+$('linhasForn').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input[data-c]')) e.target.blur(); });
 $('fForn').addEventListener('input', () => { limite = 200; filtrar(); tabela(); });
 let abaInicial = 'lista';
 try { abaInicial = localStorage.getItem('compras.aba') || 'lista'; } catch (e) {}
@@ -559,13 +652,17 @@ $('padrao').addEventListener('click', () => { P = {...PADRAO}; try { localStorag
 // copiar (cola direto no Excel)
 $('copiar').addEventListener('click', async () => {
   const n = v => v === null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
-  const COL = [  // [cabeçalho, valor, grupo]  grupo: b = todos, i = dados internos, v = valores
+  const COL = PERM.forn ? [
+    ['Descrição', p => p.descr], ['Quantidade', p => p.qtdF], ['Unidade', p => p.unida], ['Qtd mínima', p => cotDe(p.cdpro).min ?? ''],
+    ['Preço por unidade', p => cotDe(p.cdpro).preco != null ? n(cotDe(p.cdpro).preco) : ''], ['Total', p => cotDe(p.cdpro).preco != null ? n(totalCot(p)) : ''],
+  ] : [  // [cabeçalho, valor, grupo]  grupo: b = todos, i = dados internos, v = valores
     ['Código', p => p.cdpro, 'b'], ['Descrição', p => p.descr, 'b'], ['Unidade', p => p.unida, 'b'],
     ['Lista', p => p.lista, 'i'], ['Curva fin.', p => 'CBA'[p.nf - 1], 'c'], ['Curva fís.', p => 'CBA'[p.nfi - 1], 'c'], ['Curva freq.', p => 'CBA'[p.nq - 1], 'c'],
-    ['Estoque F1', p => n(p.e1), 'i'], ['Estoque F2', p => n(p.e2), 'i'], ['Consumo30D', p => n(p.media * 30), 'i'], ['DiasConsumo (F1+F2)', p => n(p.dg), 'i'], ['DiasConsumo (F2)', p => n(p.d2), 'i'],
+    ['Estoque F1', p => n(p.e1), 'i'], ['Estoque F2', p => n(p.e2), 'i'], ['Consumo30D', p => n(p.media * 30), 'i'], ['DiasConsumo (F1+F2)', p => n(p.dg), 'd'], ['DiasConsumo (F2)', p => n(p.d2), 'd'],
     ['Qtd sugerida', p => p.qtd, 'i'], ['Qtd pedido', p => p.qtdF, 'b'],
-    ['Preço compra', p => n(p.prcomn), 'v'], ['Total', p => n(p.total), 'v'], ['Impacto no pedido (%)', p => p.total ? n(p.impacto * 100) : '', 'v'], ['Último fornecedor', p => p.forn, 'v'], ['CNPJ do fornecedor', p => cnpj(p.cdfnr), 'v'],
-  ].filter(([, , g]) => g === 'b' || (g === 'i' && PERM.internos) || (g === 'c' && PERM.curvas) || (g === 'v' && PERM.valores));
+    ['Preço compra', p => n(p.prcomn), 'v'], ['Total', p => n(p.total), 'v'], ['Impacto no pedido (%)', p => p.total ? n(p.impacto * 100) : '', 'v'], ['Último fornecedor', p => p.forn, 'f'], ['CNPJ do fornecedor', p => cnpj(p.cdfnr), 'f'],
+  ].filter(([, , g]) => g === 'b' || (g === 'i' && PERM.internos) || (g === 'c' && PERM.curvas) || (g === 'v' && PERM.valores)
+                        || ((g === 'd' || g === 'f') && PERM.internos && !(PERM.ocultar || []).length) || (g === 'f' && perfil === 'admin'));
   const txt = [COL.map(c => c[0]).join('\t'), ...filtrados.map(p => COL.map(c => c[1](p)).join('\t'))].join('\n');
   try { await navigator.clipboard.writeText(txt); $('msgCopia').textContent = `${fmtI.format(filtrados.length)} linhas copiadas. Cole no Excel.`; }
   catch (e) { $('msgCopia').textContent = 'O navegador bloqueou a cópia. Tente pelo app no computador.'; }
