@@ -63,6 +63,9 @@ create table if not exists public.compras_fornecedor (
   fornecid  integer,
   fantasia  text,
   razao     text,
+  contato   text,
+  telefone  text,
+  emails    text[] not null default '{}',   -- e-mails válidos achados em EMAIL e EMAIL2 (o campo às vezes traz telefone ou anotação)
   synced_at timestamptz not null default now()
 );
 comment on table public.compras_fornecedor is
@@ -73,9 +76,13 @@ returns integer language plpgsql security definer set search_path = public as $$
 declare n integer;
 begin
   delete from public.compras_fornecedor where true;
-  insert into public.compras_fornecedor (cnpj, fornecid, fantasia, razao)
-  select distinct on (c) c, "FORNECID", nullif(trim("FANTA"), ''), nullif(trim("RAZAO"), '')
-  from jsonb_to_recordset(p) as x("FORNECID" integer, "NRCNPJ" text, "RAZAO" text, "FANTA" text),
+  insert into public.compras_fornecedor (cnpj, fornecid, fantasia, razao, contato, telefone, emails)
+  select distinct on (c) c, "FORNECID", nullif(trim("FANTA"), ''), nullif(trim("RAZAO"), ''), nullif(trim("CTATO"), ''),
+         nullif(trim(concat_ws(' ', '(' || nullif(trim("NRDDD"), '') || ')', nullif(trim("NRTEL"), ''))), ''),
+         coalesce((select array_agg(distinct lower(rtrim(m[1], '.')))
+                   from regexp_matches(concat_ws(' ', "EMAIL", "EMAIL2"), '([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})', 'g') m), '{}')
+  from jsonb_to_recordset(p) as x("FORNECID" integer, "NRCNPJ" text, "RAZAO" text, "FANTA" text, "CTATO" text,
+                                  "EMAIL" text, "EMAIL2" text, "NRDDD" text, "NRTEL" text),
        lateral (select trim("NRCNPJ") as c) k
   where coalesce(c, '') <> ''
   order by c, "FORNECID" desc;
@@ -215,6 +222,45 @@ begin
   select a.email, antes, to_jsonb(x) from public.compras_acesso x where x.email = e;
 end $$;
 
+-- painel Fornecedores (admin e comprador): cadastro com e-mails, itens no pedido e quem já tem acesso
+create or replace function public.compras_listar_fornecedores()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  perform public.compras_exige(array['admin', 'comprador']);
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'cnpj', cf.cnpj, 'fantasia', cf.fantasia, 'razao', cf.razao, 'contato', cf.contato,
+             'telefone', cf.telefone, 'emails', to_jsonb(cf.emails),
+             'itens_pedido', (select count(*) from public.compras_lista l
+                                join public.compras_produto_fornecedor pf on pf.cdpro = l.cdpro and pf.cdfnr = cf.cnpj
+                                left join public.compras_pedido_ajuste aj on aj.cdpro = l.cdpro
+                               where coalesce(aj.quantidade, l.quantidade_compra) > 0),
+             'liberados', (select coalesce(jsonb_agg(a.email), '[]') from public.compras_acesso a
+                            where a.papel = 'fornecedor' and a.cdfnr = cf.cnpj and a.ativo))
+           order by cf.fantasia)
+    from public.compras_fornecedor cf), '[]'::jsonb);
+end $$;
+
+-- libera um e-mail de fornecedor: só se o e-mail estiver no cadastro do FórmulaCerta para aquele CNPJ
+create or replace function public.compras_liberar_fornecedor(p_cnpj text, p_email text, p_liberar boolean default true)
+returns void language plpgsql security definer set search_path = public as $$
+declare a public.compras_acesso; e text := lower(trim(p_email)); c text := regexp_replace(coalesce(p_cnpj, ''), '\D', '', 'g'); antes jsonb;
+begin
+  a := public.compras_exige(array['admin', 'comprador']);
+  if not exists (select 1 from public.compras_fornecedor where cnpj = c and e = any (emails)) then
+    raise exception 'O e-mail % não está no cadastro do fornecedor % no FórmulaCerta', e, c using errcode = '22023';
+  end if;
+  select to_jsonb(x) into antes from public.compras_acesso x where x.email = e;
+  if antes is not null and antes ->> 'papel' <> 'fornecedor' then
+    raise exception 'O e-mail % já tem acesso como %', e, antes ->> 'papel' using errcode = '22023';
+  end if;
+  insert into public.compras_acesso (email, nome, papel, cdfnr, ativo, criado_por)
+  select e, cf.fantasia, 'fornecedor', c, p_liberar, a.email from public.compras_fornecedor cf where cf.cnpj = c
+  on conflict (email) do update set cdfnr = excluded.cdfnr, ativo = excluded.ativo, nome = excluded.nome;
+  insert into public.compras_acesso_hist (alterado_por, antes, depois)
+  select a.email, antes, to_jsonb(x) from public.compras_acesso x where x.email = e;
+end $$;
+
 create or replace function public.compras_listar_acessos()
 returns setof public.compras_acesso language plpgsql stable security definer set search_path = public as $$
 begin
@@ -239,12 +285,14 @@ revoke all on function public.compras_sync_fornecedor(jsonb), public.compras_syn
                        public.compras_exige(text[]), public.compras_lista_portal(),
                        public.compras_ajustar(integer, numeric), public.compras_salvar_parametros(jsonb),
                        public.compras_salvar_acesso(text, text, text, text, boolean),
-                       public.compras_listar_acessos()
+                       public.compras_listar_acessos(), public.compras_listar_fornecedores(),
+                       public.compras_liberar_fornecedor(text, text, boolean)
   from public, anon;
 grant execute on function public.compras_sync_fornecedor(jsonb), public.compras_sync_cadastro_fornecedor(jsonb) to service_role;
 grant execute on function public.compras_meu_acesso(), public.compras_lista_portal(),
                           public.compras_ajustar(integer, numeric), public.compras_salvar_parametros(jsonb),
                           public.compras_salvar_acesso(text, text, text, text, boolean),
-                          public.compras_listar_acessos()
+                          public.compras_listar_acessos(), public.compras_listar_fornecedores(),
+                          public.compras_liberar_fornecedor(text, text, boolean)
   to authenticated;
 revoke all on function public.compras_sync_fornecedor(jsonb), public.compras_exige(text[]) from authenticated;

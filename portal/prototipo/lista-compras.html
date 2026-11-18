@@ -86,6 +86,13 @@ table.tbl{border-collapse:separate; border-spacing:0; width:100%; font-size:12.5
 .cot input.min{width:80px; font-weight:600}
 .cot button{font-size:11px; padding:4px 7px; border-radius:6px}
 #tblForn td.desc{max-width:none; min-width:220px}
+.mini-kpis{display:flex; flex-wrap:wrap; gap:6px}
+#twCad{max-height:calc(100dvh - var(--hdr, 130px) - 230px)}
+#tblCad td{vertical-align:top}
+#tblCad .em{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px}
+#tblCad .em code{font-family:inherit; font-size:12.5px}
+#tblCad button.lib{font-size:11px; padding:3px 8px; border-radius:6px}
+#tblCad button.rev{font-size:11px; padding:0; background:none; color:var(--err); text-decoration:underline}
 .chip{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--soft); color:var(--ink)}
 .chip.ok{background:var(--okbg); color:var(--ok)} .chip.warn{background:var(--warnbg); color:var(--warn)} .chip.err{background:var(--errbg); color:var(--err)}
 .curvas{display:inline-flex; gap:2px}
@@ -150,6 +157,7 @@ button.perigo{color:var(--err)}
     <button role="tab" id="tab-curvas" aria-selected="false" data-tab="curvas">Curvas e listas</button>
     <button role="tab" id="tab-param" aria-selected="false" data-tab="param">Parâmetros</button>
     <button role="tab" id="tab-regras" aria-selected="false" data-tab="regras">Como é calculado</button>
+    <button role="tab" id="tab-fornec" aria-selected="false" data-tab="fornec">Fornecedores</button>
     <button role="tab" id="tab-acessos" aria-selected="false" data-tab="acessos">Acessos</button>
   </nav>
   <div class="perfil" title="Simulação: no portal, o perfil vem do login."><label for="perfil" style="margin:0">Ver como</label>
@@ -239,6 +247,22 @@ button.perigo{color:var(--err)}
     <div class="row"><button class="sec" id="padrao">Voltar aos valores do Power BI</button><span class="mut" style="font-size:12px">Só o administrador altera os parâmetros.</span></div>
   </section>
 
+  <section id="sec-fornec" class="card" hidden>
+    <h2>Fornecedores e acesso à cotação</h2>
+    <p class="mut">Cadastro de fornecedores do FórmulaCerta (FC02000). Só quem tem e-mail no cadastro pode receber acesso: o login é por código enviado a esse e-mail. Para liberar um fornecedor sem e-mail, cadastre o e-mail dele no FórmulaCerta; ele aparece aqui na próxima carga.</p>
+    <div class="mini-kpis" id="cadKpis"></div>
+    <div class="filtros">
+      <div><label for="cBusca">Buscar (nome, CNPJ, contato ou e-mail)</label><input id="cBusca" placeholder="ex.: fagron, 44.015.477"></div>
+      <div><label for="cMostrar">Mostrar</label><select id="cMostrar">
+        <option value="pedido" selected>Fornecedores do pedido</option><option value="email">Com e-mail</option><option value="semEmail">Sem e-mail</option>
+        <option value="liberados">Com acesso liberado</option><option value="todos">Todos do cadastro</option></select></div>
+    </div>
+    <p class="mut" id="cadConta" style="font-size:13px"></p>
+    <div class="tw" id="twCad"><table class="tbl" id="tblCad"><thead><tr>
+      <th>Fornecedor</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th class="r" title="Itens do pedido atual cujo último lote veio deste fornecedor">Itens no pedido</th><th>E-mail e acesso</th>
+    </tr></thead><tbody id="linhasCad"></tbody></table></div>
+  </section>
+
   <section id="sec-acessos" class="card" hidden>
     <h2>Perfis de acesso</h2>
     <p class="mut">Proposta para o portal. O login é por e-mail com código, como nos outros portais da casa. O administrador cadastra cada e-mail com um perfil; o fornecedor fica ligado ao CNPJ dele. Use "Ver como", no topo, para conferir o que cada perfil enxerga.</p>
@@ -251,6 +275,7 @@ button.perigo{color:var(--err)}
       <tr><td>Alterar parâmetros (limites de DiasConsumo, cortes das curvas, peso)</td><td class="s">sim</td><td class="n">só vê</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Cotar os itens do pedido: preço por unidade, quantidade mínima e reduções de 5%, 10% ou valor digitado</td><td class="n">não</td><td class="n">não</td><td class="n">não</td><td class="s">sim</td></tr>
       <tr><td>Ver se tem o menor preço (até reduzir o próprio preço; depois, só no fechamento)</td><td class="n">–</td><td class="n">–</td><td class="n">–</td><td class="s">sim</td></tr>
+      <tr><td>Liberar e revogar o acesso de fornecedores (só e-mails do cadastro do FórmulaCerta)</td><td class="s">sim</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td></tr>
       <tr><td>Cadastrar e remover acessos</td><td class="s">sim</td><td class="n">não</td><td class="n">não</td><td class="n">não</td></tr>
     </table></div>
     <p class="mut">Fornecedor do item = CNPJ do lote de entrada mais recente no estoque (FC03140). O nome vem do cadastro de fornecedores do FórmulaCerta (FC02000).</p>
@@ -278,7 +303,9 @@ button.perigo{color:var(--err)}
 
 <script>
 const D = __DADOS__;
-const FORN = __FORNECEDORES__;   // FC02000: CNPJ -> [nome fantasia, razão social]
+const FORN = __FORNECEDORES__;
+// FC02000 completo: [fornecid, cnpj, fantasia, razão, contato, [e-mails válidos], telefone, texto do campo e-mail que não é e-mail]
+const CAD = __CADASTRO__;   // FC02000: CNPJ -> [nome fantasia, razão social]
 const PADRAO = {cobGeral:45, cobF2:30, peso:0.6, dias:30, corteA:0.8, corteB:0.95};
 const EMB = [1,5,10,25,50,100,250,500,1000,2500,5000,10000,25000,50000,100000,150000,300000];
 // passo do − / + conforme a quantidade sugerida (embalagem): a partir de, passo
@@ -293,6 +320,10 @@ const salvarCOT = () => { try { localStorage.setItem('compras.cotacoes', JSON.st
 const cotDe = cd => (COT[fornSel] || {})[cd] || {};
 const cotSet = (cd, v) => { (COT[fornSel] ||= {})[cd] = {...cotDe(cd), ...v}; salvarCOT(); };
 const lerNum = s => parseFloat(String(s).trim().replace(/\./g, '').replace(',', '.'));
+// acessos liberados a fornecedores: LIB[email] = {cnpj, em, por}. Só neste navegador, por enquanto.
+let LIB = {};
+try { LIB = JSON.parse(localStorage.getItem('compras.liberados') || '{}') || {}; } catch (e) {}
+const salvarLIB = () => { try { localStorage.setItem('compras.liberados', JSON.stringify(LIB)); } catch (e) {} };
 const LISTA_REGRA = {1:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',2:'DiasConsumo (F2) ≤ 30 (controlado: e DiasConsumo (F1+F2) < 45)',3:'DiasConsumo (F1+F2) ≤ 45',4:'DiasConsumo (F1+F2) ≤ 45',5:'Teve consumo e DiasConsumo (F1+F2) ≤ 45'};
 
 const prods = D.map(r => ({cdpro:r[0], descr:r[1], situa:r[2], unida:r[3], prcomn:r[4], ctrl:r[5], porta:r[6], e1:r[7], e2:r[8], f30:r[9], f90:r[10], c90:r[11], q90:r[12], cdfnr:r[13]}));
@@ -303,8 +334,8 @@ prods.forEach(p => p.forn = fornNome(p.cdfnr));
 
 // perfis de acesso (simulados aqui; no portal vêm do login)
 const PERFIS = {
-  admin:      {abas:['lista','curvas','param','regras','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
-  comprador:  {abas:['lista','param','regras'],                    internos:true,  valores:true,  ajusta:true,  param:false, curvas:false,
+  admin:      {abas:['lista','curvas','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
+  comprador:  {abas:['lista','param','regras','fornec'],           internos:true,  valores:true,  ajusta:true,  param:false, curvas:false,
                ocultar:[8, 9, 14]},   // DiasConsumo (F1+F2), DiasConsumo (F2) e último fornecedor
   producao:   {abas:['lista','curvas','regras'],                   internos:true,  valores:false, ajusta:false, param:false, curvas:true},
   fornecedor: {abas:['lista'],                                     internos:false, valores:false, ajusta:false, param:false, curvas:false, forn:true},
@@ -536,6 +567,45 @@ function curvas() {
   }).join('');
 }
 
+function cadastro() {
+  const itens = {};
+  prods.forEach(p => { if (p.cdfnr && p.qtdF > 0) itens[p.cdfnr] = (itens[p.cdfnr] || 0) + 1; });
+  const lib = c => Object.keys(LIB).filter(e => LIB[e].cnpj === c);
+  const q = $('cBusca').value.trim().toLowerCase(), qd = q.replace(/\D/g, ''), m = $('cMostrar').value;
+  const rows = CAD.filter(r => {
+    const [, cn, fa, ra, ct, ems] = r;
+    if (m === 'pedido' && !itens[cn]) return false;
+    if (m === 'email' && !ems.length) return false;
+    if (m === 'semEmail' && ems.length) return false;
+    if (m === 'liberados' && !lib(cn).length) return false;
+    return !q || [fa, ra, ct, ...ems].some(x => String(x).toLowerCase().includes(q)) || (qd.length >= 3 && cn.includes(qd));
+  }).sort((a, b) => (itens[b[1]] || 0) - (itens[a[1]] || 0) || a[2].localeCompare(b[2]));
+  const doPedido = CAD.filter(r => itens[r[1]]);
+  $('cadKpis').innerHTML = [
+    ['No cadastro', CAD.length], ['Com e-mail', CAD.filter(r => r[5].length).length],
+    ['Do pedido', doPedido.length], ['Do pedido sem e-mail', doPedido.filter(r => !r[5].length).length],
+    ['Acessos liberados', Object.keys(LIB).length],
+  ].map(([a, b]) => `<div class="kpi"><small>${a}</small><b>${fmtI.format(b)}</b></div>`).join('');
+  $('cadConta').textContent = `${fmtI.format(rows.length)} fornecedores` + (rows.length > 300 ? ' · mostrando 300' : '');
+  $('linhasCad').innerHTML = rows.slice(0, 300).map(([id, cn, fa, ra, ct, ems, fone, sobra]) => `<tr data-cnpj="${cn}">
+    <td><b>${esc(fa || ra)}</b><div class="qsug">${esc(ra)}</div></td>
+    <td>${cnpj(cn)}</td><td>${esc(ct) || '<span class="mut">–</span>'}</td><td>${esc(fone) || '<span class="mut">–</span>'}</td>
+    <td class="r">${itens[cn] ? fmtI.format(itens[cn]) : '<span class="mut">–</span>'}</td>
+    <td>${ems.map(e => `<div class="em"><code>${esc(e)}</code>${LIB[e]
+        ? `<span class="chip ok">acesso liberado</span><button class="rev" data-acao="revogar" data-email="${esc(e)}">revogar</button>`
+        : `<button class="sec lib" data-acao="liberar" data-email="${esc(e)}">Liberar acesso</button>`}</div>`).join('')
+      || `<span class="chip warn" title="${esc(sobra)}">${sobra ? 'campo e-mail sem e-mail válido' : 'sem e-mail no FórmulaCerta'}</span>`}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="mut">Nenhum fornecedor com esses filtros.</td></tr>';
+}
+['cBusca', 'cMostrar'].forEach(id => $(id).addEventListener('input', cadastro));
+$('linhasCad').addEventListener('click', e => {
+  const b = e.target.closest('button[data-acao]'); if (!b) return;
+  const email = b.dataset.email, cn = b.closest('tr').dataset.cnpj;
+  if (b.dataset.acao === 'liberar') LIB[email] = {cnpj: cn, em: new Date().toISOString(), por: perfil};
+  else delete LIB[email];
+  salvarLIB(); cadastro();
+});
+
 function tudo() { calcular(); filtrar(); tabela(); curvas(); }
 
 // abas
@@ -543,7 +613,8 @@ document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('cl
 function abrir(t) {
   if (!PERM.abas.includes(t)) t = 'lista';
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  ['lista','curvas','param','regras','acessos'].forEach(s => $('sec-' + s).hidden = s !== t);
+  ['lista','curvas','param','regras','fornec','acessos'].forEach(s => $('sec-' + s).hidden = s !== t);
+  if (t === 'fornec') cadastro();
   document.body.classList.toggle('app', t === 'lista');
   try { localStorage.setItem('compras.aba', t); } catch (e) {}
 }
