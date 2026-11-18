@@ -1,0 +1,329 @@
+<title>Portal de Compras</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Molde dos portais da casa (PortalSiteMedicinal): cabeçalho fixo, abas, KPIs, filtros e tabela.
+   Layout: coluna única de até 1240px; tabela larga rola dentro do próprio cartão. */
+:root{
+  --bg:#f3f5f7; --card:#fff; --ink:#14191f; --mut:#5f6b76; --line:#dde3e8;
+  --brand:#1f5f8b; --brand2:#2a78ad; --soft:#e6eef5; --field:#fff;
+  --ok:#1f7a4d; --okbg:#e5f3ec; --warn:#a15a10; --warnbg:#fbf0e2; --err:#b3261e; --errbg:#fbe9e7;
+  --shadow:0 1px 2px rgba(20,25,31,.06),0 8px 24px rgba(20,25,31,.06); --radius:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1418; --card:#171e24; --ink:#e6ebef; --mut:#93a0ab; --line:#2a343d;
+  --brand:#4f97c9; --brand2:#6fb0dc; --soft:#1d2a35; --field:#11171c;
+  --ok:#5fc08f; --okbg:#173327; --warn:#e2a35c; --warnbg:#3a2a17; --err:#f08a80; --errbg:#3d1d1a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1418; --card:#171e24; --ink:#e6ebef; --mut:#93a0ab; --line:#2a343d;
+  --brand:#4f97c9; --brand2:#6fb0dc; --soft:#1d2a35; --field:#11171c;
+  --ok:#5fc08f; --okbg:#173327; --warn:#e2a35c; --warnbg:#3a2a17; --err:#f08a80; --errbg:#3d1d1a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.45}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--card)}
+h1,h2,h3,p{margin:0}
+.wrap,.topin{max-width:1240px; margin:0 auto; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{padding-block:18px 64px; display:flex; flex-direction:column; gap:14px}
+header.top{background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:env(safe-area-inset-top,0px); z-index:5}
+.topin{padding-block:12px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:10px}
+.dot{width:10px; height:10px; border-radius:50%; background:var(--brand); flex:none}
+.brand b{font-size:17px; display:block}
+.brand span{font-size:12px; color:var(--mut); display:block}
+.pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--warnbg); color:var(--warn); white-space:nowrap}
+.mut{color:var(--mut)} .num,td{font-variant-numeric:tabular-nums}
+button{font:inherit; font-size:14px; font-weight:600; padding:9px 14px; border:0; border-radius:10px; background:var(--brand); color:#fff; cursor:pointer}
+button.sec{background:var(--card); color:var(--brand); border:1px solid var(--line)}
+button.mini{font-size:12px; padding:6px 10px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand2); outline-offset:1px}
+nav.tabs{display:flex; gap:6px; flex-wrap:wrap}
+nav.tabs button{background:var(--card); color:var(--ink); border:1px solid var(--line)}
+nav.tabs button[aria-selected="true"]{background:var(--brand); color:#fff; border-color:var(--brand)}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px}
+.kpi{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:2px}
+.kpi small{color:var(--mut); font-size:12px; font-weight:600; letter-spacing:.02em; text-transform:uppercase}
+.kpi b{font-size:24px; font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px; color:var(--mut)}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0}
+.card h2{font-size:16px}
+.filtros{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; align-items:end}
+label{display:block; font-size:13px; color:var(--mut); margin-bottom:5px; font-weight:600}
+input,select{width:100%; font:inherit; font-size:14px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:var(--field); color:var(--ink)}
+.row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.tw{overflow-x:auto; border:1px solid var(--line); border-radius:10px}
+table.tbl{border-collapse:collapse; width:100%; font-size:13px}
+.tbl th{position:sticky; top:0; background:var(--soft); text-align:left; font-size:12px; color:var(--mut); font-weight:700; padding:8px 10px; white-space:nowrap; cursor:pointer; user-select:none}
+.tbl th.r,.tbl td.r{text-align:right}
+.tbl th[aria-sort="ascending"]::after{content:" ▲"} .tbl th[aria-sort="descending"]::after{content:" ▼"}
+.tbl td{padding:7px 10px; border-top:1px solid var(--line); white-space:nowrap}
+.tbl td.desc{white-space:normal; min-width:200px}
+.tbl tr.compra td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+.chip{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--soft); color:var(--ink)}
+.chip.ok{background:var(--okbg); color:var(--ok)} .chip.warn{background:var(--warnbg); color:var(--warn)} .chip.err{background:var(--errbg); color:var(--err)}
+.curvas{display:inline-flex; gap:2px}
+.curvas i{font-style:normal; font-size:11px; font-weight:700; width:18px; text-align:center; border-radius:4px; padding:1px 0}
+.cA{background:var(--okbg); color:var(--ok)} .cB{background:var(--warnbg); color:var(--warn)} .cC{background:var(--soft); color:var(--mut)}
+.ctl{font-size:11px; font-weight:700; color:var(--err); margin-left:6px}
+.params{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px}
+.params p{font-size:12px; color:var(--mut); margin-top:4px}
+.matriz{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px}
+.matriz table{border-collapse:collapse; width:100%; font-size:13px}
+.matriz th,.matriz td{border:1px solid var(--line); padding:6px 8px; text-align:center}
+.matriz th{background:var(--soft); color:var(--mut); font-size:12px}
+.regras{display:grid; gap:10px; max-width:72ch}
+.regras li{margin-bottom:6px}
+.msg{font-size:13px; color:var(--ok); min-height:18px}
+@media (max-width:560px){ .kpi b{font-size:20px} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top"><div class="topin">
+  <div class="brand"><i class="dot"></i><div><b>Portal de Compras</b><span>Lista de compras · FórmulaCerta · grupo M, setor 001</span></div></div>
+  <span class="pill" title="Os dados vêm do arquivo LISTADECOMPRAS.V7.pbix. Assim que a carga do n8n estiver ativa, a página passa a ler o Supabase.">Protótipo · dados do snapshot do Power BI</span>
+</div></header>
+
+<main class="wrap">
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-lista" aria-selected="true" data-tab="lista">Lista de compras</button>
+    <button role="tab" id="tab-curvas" aria-selected="false" data-tab="curvas">Curvas e listas</button>
+    <button role="tab" id="tab-param" aria-selected="false" data-tab="param">Parâmetros</button>
+    <button role="tab" id="tab-regras" aria-selected="false" data-tab="regras">Como é calculado</button>
+  </nav>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section id="sec-lista" class="card">
+    <div class="filtros">
+      <div><label for="fBusca">Buscar (código ou descrição)</label><input id="fBusca" placeholder="ex.: 10928, pullulan"></div>
+      <div><label for="fIndica">Mostrar</label><select id="fIndica"><option value="comprar" selected>Só indicados para compra</option><option value="todos">Todos os produtos</option><option value="nao">Não indicados</option></select></div>
+      <div><label for="fLista">Lista</label><select id="fLista"><option value="">Todas</option><option value="1">Lista 1</option><option value="2">Lista 2</option><option value="3">Lista 3</option><option value="4">Lista 4</option><option value="5">Lista 5</option></select></div>
+      <div><label for="fCtrl">Controlados</label><select id="fCtrl"><option value="">Todos</option><option value="1">Só controlados</option><option value="0">Sem controlados</option></select></div>
+      <div><label for="fSitua">Situação no cadastro</label><select id="fSitua"><option value="">Todas</option><option value="A">Ativos (A)</option><option value="I">Inativos (I)</option></select></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <p class="mut" id="conta"></p>
+      <div class="row"><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
+    </div>
+    <div class="tw"><table class="tbl" id="tbl"><thead><tr>
+      <th data-k="cdpro">Cód.</th>
+      <th data-k="descr">Descrição</th>
+      <th data-k="lista" class="r">Lista</th>
+      <th data-k="nota" title="Financeiro · Físico · Frequência (90 dias)">Curvas F·Fí·Fr</th>
+      <th data-k="e1" class="r">Estoque F1</th>
+      <th data-k="e2" class="r">Estoque F2</th>
+      <th data-k="media" class="r">Consumo/dia</th>
+      <th data-k="dg" class="r">Cobertura geral</th>
+      <th data-k="d2" class="r">Cobertura F2</th>
+      <th data-k="qtd" class="r">Qtd. sugerida</th>
+      <th data-k="prcomn" class="r">Preço compra</th>
+      <th data-k="total" class="r" aria-sort="descending">Total</th>
+    </tr></thead><tbody id="linhas"></tbody></table></div>
+    <div class="row"><button class="sec" id="mais" hidden>Mostrar mais 200</button></div>
+  </section>
+
+  <section id="sec-curvas" class="card" hidden>
+    <h2>Produtos por lista</h2>
+    <p class="mut">Cada curva vale A = 3, B = 2, C = 1. A soma das três (de 3 a 9) define a lista. Clique numa célula para ver os produtos.</p>
+    <div class="tw"><table class="tbl" id="tblListas"><thead><tr>
+      <th>Lista</th><th>Nota</th><th class="r">Produtos</th><th class="r">Indicados</th><th class="r">Valor indicado</th><th>Regra de compra</th>
+    </tr></thead><tbody></tbody></table></div>
+    <h2>Combinações de curvas</h2>
+    <p class="mut">Quantidade de produtos em cada combinação de curva financeira × física, separada pela curva de frequência.</p>
+    <div class="matriz" id="matriz"></div>
+  </section>
+
+  <section id="sec-param" class="card" hidden>
+    <h2>Parâmetros da simulação</h2>
+    <p class="mut">Mude os valores para ver o efeito na lista. As mudanças ficam só neste navegador. No portal, vão ficar gravadas na tabela de parâmetros com histórico.</p>
+    <div class="params">
+      <div><label for="pCobGeral">Cobertura geral máxima (dias)</label><input id="pCobGeral" type="number" min="0" step="1"><p>Listas 3, 4 e 5 compram quando a cobertura geral fica até este valor. Listas 1 e 2 usam para controlados.</p></div>
+      <div><label for="pCobF2">Cobertura da filial 2 máxima (dias)</label><input id="pCobF2" type="number" min="0" step="1"><p>Listas 1 e 2. Era 45; foi reduzido para 30 em 15/12/2025, com a orientação de voltar para 45 assim que possível.</p></div>
+      <div><label for="pPeso">Peso do estoque da filial 1</label><input id="pPeso" type="number" min="0" max="1" step="0.05"><p>Cobertura geral = (estoque F1 × peso + estoque F2) ÷ consumo diário.</p></div>
+      <div><label for="pDias">Dias de compra</label><input id="pDias" type="number" min="1" step="1"><p>Quantidade = consumo diário × dias, arredondada para cima até a próxima embalagem.</p></div>
+      <div><label for="pCorteA">Corte da curva A</label><input id="pCorteA" type="number" min="0" max="1" step="0.01"><p>Produtos que somam até esta fração do total acumulado.</p></div>
+      <div><label for="pCorteB">Corte da curva B</label><input id="pCorteB" type="number" min="0" max="1" step="0.01"><p>Entre o corte A e este valor. O resto é curva C.</p></div>
+    </div>
+    <div class="row"><button class="sec" id="padrao">Voltar aos valores do Power BI</button></div>
+  </section>
+
+  <section id="sec-regras" class="card" hidden>
+    <div class="regras">
+      <h2>Como a lista é calculada</h2>
+      <p>Mesmas regras do painel <b>LISTADECOMPRAS.V7</b>. Universo: produtos do grupo M, setor 001, ativos e inativos.</p>
+      <ol>
+        <li><b>Curvas ABC</b> em três dimensões dos últimos 90 dias: custo consumido (financeiro), quantidade consumida (físico) e número de usos (frequência). Os produtos são ordenados pela participação; quem soma até 80% do total é A, até 95% é B, o resto é C.</li>
+        <li><b>Lista</b> pela soma das notas: 8–9 → Lista 1; 6–7 → Lista 2; 5 → Lista 3; 4 → Lista 4; 3 (C/C/C) → Lista 5.</li>
+        <li><b>Consumo diário</b> = (consumo de 30 dias + consumo de 90 dias) ÷ 120. Os últimos 30 dias contam em dobro.</li>
+        <li><b>Cobertura</b>: geral = (estoque F1 × 0,6 + estoque F2) ÷ consumo diário; filial 2 = estoque F2 ÷ consumo diário.</li>
+        <li><b>Indicação</b>: Listas 3–5 compram com cobertura geral até 45 dias (Lista 5 só se teve consumo). Listas 1–2 compram com cobertura da filial 2 até 30 dias; se o produto for controlado, a cobertura geral também precisa estar abaixo de 45.</li>
+        <li><b>Quantidade</b> = consumo diário × 30 dias, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
+      </ol>
+      <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const D = __DADOS__;
+const PADRAO = {cobGeral:45, cobF2:30, peso:0.6, dias:30, corteA:0.8, corteB:0.95};
+const EMB = [1,5,10,25,50,100,250,500,1000,2500,5000,10000,25000,50000,100000,150000,300000];
+const LISTA_REGRA = {1:'Cobertura F2 ≤ limite F2 (controlado: e geral < limite geral)',2:'Cobertura F2 ≤ limite F2 (controlado: e geral < limite geral)',3:'Cobertura geral ≤ limite geral',4:'Cobertura geral ≤ limite geral',5:'Teve consumo e cobertura geral ≤ limite geral'};
+
+const prods = D.map(r => ({cdpro:r[0], descr:r[1], situa:r[2], unida:r[3], prcomn:r[4], ctrl:r[5], porta:r[6], e1:r[7], e2:r[8], f30:r[9], f90:r[10], c90:r[11], q90:r[12]}));
+
+let P = {...PADRAO};
+try { const s = JSON.parse(localStorage.getItem('compras.param') || 'null'); if (s) P = {...PADRAO, ...s}; } catch (e) {}
+
+function notas(campo, cA, cB) {
+  const tot = prods.reduce((s, p) => s + p[campo], 0);
+  const idx = prods.map((_, i) => i).sort((a, b) => prods[b][campo] - prods[a][campo]);
+  const out = new Array(prods.length);
+  let acum = 0, i = 0;
+  while (i < idx.length) {            // empates entram juntos no acumulado, como o RANKX
+    const v = prods[idx[i]][campo]; let j = i, soma = 0;
+    while (j < idx.length && prods[idx[j]][campo] === v) { soma += tot ? v / tot : 0; j++; }
+    acum += soma;
+    const n = acum < cA ? 3 : acum < cB ? 2 : 1;
+    for (let k = i; k < j; k++) out[idx[k]] = n;
+    i = j;
+  }
+  return out;
+}
+
+function calcular() {
+  const nf = notas('c90', P.corteA, P.corteB), nfi = notas('f90', P.corteA, P.corteB), nq = notas('q90', P.corteA, P.corteB);
+  prods.forEach((p, i) => {
+    p.nf = nf[i]; p.nfi = nfi[i]; p.nq = nq[i];
+    p.nota = p.nf + p.nfi + p.nq;
+    p.lista = p.nota >= 8 ? 1 : p.nota >= 6 ? 2 : p.nota === 5 ? 3 : p.nota === 4 ? 4 : 5;
+    p.media = (p.f30 + p.f90) / 120;
+    p.dg = p.media ? (p.e1 * P.peso + p.e2) / p.media : null;
+    p.d2 = p.media ? p.e2 / p.media : null;
+    const dg = p.dg ?? 0, d2 = p.d2 ?? 0;   // no DAX, BLANK comparado vale 0
+    if (p.lista === 5) p.comprar = p.f90 !== 0 && dg <= P.cobGeral;
+    else if (p.lista >= 3) p.comprar = dg <= P.cobGeral;
+    else p.comprar = d2 <= P.cobF2 && (p.ctrl === 0 || dg < P.cobGeral);
+    const nec = (p.f30 + p.f90) * P.dias / 120;
+    p.qtd = p.comprar && nec > 0 ? (EMB.find(x => x >= nec) ?? 0) : 0;
+    p.total = p.prcomn * p.qtd;
+  });
+}
+
+const fmtN = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:2});
+const fmtI = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:0});
+const fmtM = v => v > 0 && v < 1 ? new Intl.NumberFormat('pt-BR', {maximumSignificantDigits:2}).format(v) : fmtN.format(v);
+const fmtR = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = id => document.getElementById(id);
+
+function kpis() {
+  const c = prods.filter(p => p.comprar);
+  const total = c.reduce((s, p) => s + p.total, 0);
+  const semPreco = c.filter(p => !p.prcomn).length;
+  const ctrl = c.filter(p => p.ctrl).length;
+  const l12 = c.filter(p => p.lista <= 2);
+  $('kpis').innerHTML = [
+    ['Indicados para compra', fmtI.format(c.length), `de ${fmtI.format(prods.length)} produtos`],
+    ['Valor sugerido', fmtR.format(total), 'quantidade × preço de compra'],
+    ['Listas 1 e 2', fmtI.format(l12.length), fmtR.format(l12.reduce((s, p) => s + p.total, 0))],
+    ['Controlados indicados', fmtI.format(ctrl), 'portaria preenchida'],
+    ['Indicados sem preço', fmtI.format(semPreco), semPreco ? 'preço de compra zerado no cadastro' : 'todos com preço'],
+  ].map(([a, b, c]) => `<div class="kpi"><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join('');
+}
+
+let ord = {k:'total', dir:-1}, limite = 200, filtrados = [];
+function filtrar() {
+  const q = $('fBusca').value.trim().toLowerCase(), ind = $('fIndica').value, li = $('fLista').value, ct = $('fCtrl').value, si = $('fSitua').value;
+  filtrados = prods.filter(p =>
+    (ind === 'todos' || (ind === 'comprar') === p.comprar) &&
+    (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
+    (!q || String(p.cdpro).includes(q) || p.descr.toLowerCase().includes(q)));
+  const {k, dir} = ord;
+  filtrados.sort((a, b) => {
+    const x = a[k] ?? -Infinity, y = b[k] ?? -Infinity;
+    return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir || a.cdpro - b.cdpro;
+  });
+}
+const cob = (v, lim) => v === null ? '<span class="chip">sem consumo</span>'
+  : `<span class="chip ${v <= lim ? 'err' : v <= lim * 2 ? 'warn' : 'ok'}">${fmtI.format(v)} d</span>`;
+function tabela() {
+  const linhas = filtrados.slice(0, limite).map(p => `<tr class="${p.comprar ? 'compra' : ''}">
+    <td>${p.cdpro}</td>
+    <td class="desc">${esc(p.descr)}${p.ctrl ? `<span class="ctl" title="Portaria ${esc(p.porta)}">${esc(p.porta)}</span>` : ''}${p.situa !== 'A' ? ' <span class="chip">inativo</span>' : ''}</td>
+    <td class="r">${p.lista}</td>
+    <td><span class="curvas">${[p.nf, p.nfi, p.nq].map(n => `<i class="c${'CBA'[n - 1]}">${'CBA'[n - 1]}</i>`).join('')}</span></td>
+    <td class="r">${fmtN.format(p.e1)}</td><td class="r">${fmtN.format(p.e2)}</td>
+    <td class="r">${fmtM(p.media)} ${esc(p.unida)}</td>
+    <td class="r">${cob(p.dg, P.cobGeral)}</td><td class="r">${cob(p.d2, P.cobF2)}</td>
+    <td class="r"><b>${p.qtd ? fmtI.format(p.qtd) : '–'}</b></td>
+    <td class="r">${p.prcomn ? fmtR.format(p.prcomn) : '<span class="chip warn">sem preço</span>'}</td>
+    <td class="r">${p.total ? fmtR.format(p.total) : '–'}</td></tr>`).join('');
+  $('linhas').innerHTML = linhas || '<tr><td colspan="12" class="mut">Nenhum produto com esses filtros.</td></tr>';
+  const soma = filtrados.reduce((s, p) => s + p.total, 0);
+  $('conta').textContent = `${fmtI.format(filtrados.length)} produtos · total ${fmtR.format(soma)}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
+  $('mais').hidden = filtrados.length <= limite;
+  document.querySelectorAll('#tbl th').forEach(th => th.setAttribute('aria-sort', th.dataset.k === ord.k ? (ord.dir > 0 ? 'ascending' : 'descending') : 'none'));
+}
+
+function curvas() {
+  const tb = $('tblListas').querySelector('tbody');
+  const notaTxt = {1:'8–9', 2:'6–7', 3:'5', 4:'4', 5:'3'};
+  tb.innerHTML = [1,2,3,4,5].map(l => {
+    const g = prods.filter(p => p.lista === l), c = g.filter(p => p.comprar);
+    return `<tr data-lista="${l}" style="cursor:pointer"><td><b>Lista ${l}</b></td><td>${notaTxt[l]}</td><td class="r">${fmtI.format(g.length)}</td><td class="r">${fmtI.format(c.length)}</td><td class="r">${fmtR.format(c.reduce((s, p) => s + p.total, 0))}</td><td class="mut">${LISTA_REGRA[l]}</td></tr>`;
+  }).join('');
+  $('matriz').innerHTML = [3,2,1].map(fr => {
+    const cel = (f, fi) => prods.filter(p => p.nf === f && p.nfi === fi && p.nq === fr).length;
+    return `<div><table><caption class="mut" style="text-align:left; padding-bottom:6px">Frequência <b>${'CBA'[fr - 1]}</b></caption>
+      <tr><th>Fin. \\ Físico</th><th>A</th><th>B</th><th>C</th></tr>
+      ${[3,2,1].map(f => `<tr><th>${'CBA'[f - 1]}</th>${[3,2,1].map(fi => `<td>${fmtI.format(cel(f, fi))}</td>`).join('')}</tr>`).join('')}</table></div>`;
+  }).join('');
+}
+
+function tudo() { calcular(); kpis(); filtrar(); tabela(); curvas(); }
+
+// abas
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => abrir(b.dataset.tab)));
+function abrir(t) {
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  ['lista','curvas','param','regras'].forEach(s => $('sec-' + s).hidden = s !== t);
+  try { localStorage.setItem('compras.aba', t); } catch (e) {}
+}
+try { const a = localStorage.getItem('compras.aba'); if (a) abrir(a); } catch (e) {}
+
+// filtros e ordenação
+['fBusca','fIndica','fLista','fCtrl','fSitua'].forEach(id => $(id).addEventListener('input', () => { limite = 200; filtrar(); tabela(); }));
+document.querySelectorAll('#tbl th').forEach(th => th.addEventListener('click', () => {
+  const k = th.dataset.k; ord = {k, dir: ord.k === k ? -ord.dir : (k === 'descr' || k === 'cdpro' || k === 'lista' ? 1 : -1)};
+  filtrar(); tabela();
+}));
+$('mais').addEventListener('click', () => { limite += 200; tabela(); });
+$('tblListas').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-lista]'); if (!tr) return;
+  $('fLista').value = tr.dataset.lista; $('fIndica').value = 'todos'; abrir('lista'); filtrar(); tabela();
+});
+
+// parâmetros
+const CAMPOS = {pCobGeral:'cobGeral', pCobF2:'cobF2', pPeso:'peso', pDias:'dias', pCorteA:'corteA', pCorteB:'corteB'};
+function mostrarParam() { for (const [id, k] of Object.entries(CAMPOS)) $(id).value = P[k]; }
+for (const [id, k] of Object.entries(CAMPOS)) $(id).addEventListener('change', () => {
+  const v = parseFloat($(id).value); if (!isNaN(v)) P[k] = v; else $(id).value = P[k];
+  try { localStorage.setItem('compras.param', JSON.stringify(P)); } catch (e) {}
+  tudo();
+});
+$('padrao').addEventListener('click', () => { P = {...PADRAO}; try { localStorage.removeItem('compras.param'); } catch (e) {} mostrarParam(); tudo(); });
+
+// copiar (cola direto no Excel)
+$('copiar').addEventListener('click', async () => {
+  const cab = ['Código','Descrição','Lista','Curva fin.','Curva fís.','Curva freq.','Estoque F1','Estoque F2','Consumo/dia','Cobertura geral','Cobertura F2','Qtd sugerida','Preço compra','Total'];
+  const n = v => v === null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
+  const txt = [cab.join('\t'), ...filtrados.map(p => [p.cdpro, p.descr, p.lista, 'CBA'[p.nf - 1], 'CBA'[p.nfi - 1], 'CBA'[p.nq - 1], n(p.e1), n(p.e2), n(p.media), n(p.dg), n(p.d2), p.qtd, n(p.prcomn), n(p.total)].join('\t'))].join('\n');
+  try { await navigator.clipboard.writeText(txt); $('msgCopia').textContent = `${fmtI.format(filtrados.length)} linhas copiadas. Cole no Excel.`; }
+  catch (e) { $('msgCopia').textContent = 'O navegador bloqueou a cópia. Tente pelo app no computador.'; }
+});
+
+mostrarParam(); tudo();
+</script>
