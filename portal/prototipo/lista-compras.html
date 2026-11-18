@@ -67,6 +67,9 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
 .curvas i{font-style:normal; font-size:11px; font-weight:700; width:18px; text-align:center; border-radius:4px; padding:1px 0}
 .cA{background:var(--okbg); color:var(--ok)} .cB{background:var(--warnbg); color:var(--warn)} .cC{background:var(--soft); color:var(--mut)}
 .ctl{font-size:11px; font-weight:700; color:var(--err); margin-left:6px}
+.cobfiltro{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding-top:12px; border-top:1px dashed var(--line)}
+.cobfiltro .ctipo{flex:1 1 240px; max-width:320px} .cobfiltro .cdias{flex:0 1 120px}
+.cobfiltro #atalhos{padding-bottom:4px}
 .params{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px}
 .params p{font-size:12px; color:var(--mut); margin-top:4px}
 .matriz{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px}
@@ -102,6 +105,14 @@ table.tbl{border-collapse:collapse; width:100%; font-size:13px}
       <div><label for="fLista">Lista</label><select id="fLista"><option value="">Todas</option><option value="1">Lista 1</option><option value="2">Lista 2</option><option value="3">Lista 3</option><option value="4">Lista 4</option><option value="5">Lista 5</option></select></div>
       <div><label for="fCtrl">Controlados</label><select id="fCtrl"><option value="">Todos</option><option value="1">Só controlados</option><option value="0">Sem controlados</option></select></div>
       <div><label for="fSitua">Situação no cadastro</label><select id="fSitua"><option value="">Todas</option><option value="A">Ativos (A)</option><option value="I">Inativos (I)</option></select></div>
+    </div>
+    <div class="cobfiltro">
+      <div class="ctipo"><label for="fCobTipo">Dias de consumo suportados</label><select id="fCobTipo"><option value="dg" selected>Cobertura geral (F1 × peso + F2)</option><option value="d2">Cobertura da filial 2</option></select></div>
+      <div class="cdias"><label for="fCobMin">De (dias)</label><input id="fCobMin" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+      <div class="cdias"><label for="fCobMax">Até (dias)</label><input id="fCobMax" type="number" min="0" step="1" inputmode="numeric" placeholder="sem limite"></div>
+      <div class="row" id="atalhos" aria-label="Atalhos de cobertura">
+        <button class="sec mini" data-ate="15">até 15 d</button><button class="sec mini" data-ate="30">até 30 d</button><button class="sec mini" data-ate="45">até 45 d</button><button class="sec mini" data-de="90">90 d ou mais</button><button class="sec mini" data-limpa="1">limpar</button>
+      </div>
     </div>
     <div class="row" style="justify-content:space-between">
       <p class="mut" id="conta"></p>
@@ -237,9 +248,12 @@ function kpis() {
 let ord = {k:'total', dir:-1}, limite = 200, filtrados = [];
 function filtrar() {
   const q = $('fBusca').value.trim().toLowerCase(), ind = $('fIndica').value, li = $('fLista').value, ct = $('fCtrl').value, si = $('fSitua').value;
+  const ck = $('fCobTipo').value, cMin = parseFloat($('fCobMin').value), cMax = parseFloat($('fCobMax').value);
+  const temCob = !isNaN(cMin) || !isNaN(cMax);
   filtrados = prods.filter(p =>
     (ind === 'todos' || (ind === 'comprar') === p.comprar) &&
     (!li || p.lista === +li) && (ct === '' || p.ctrl === +ct) && (!si || p.situa === si) &&
+    (!temCob || (p[ck] !== null && (isNaN(cMin) || p[ck] >= cMin) && (isNaN(cMax) || p[ck] <= cMax))) &&
     (!q || String(p.cdpro).includes(q) || p.descr.toLowerCase().includes(q)));
   const {k, dir} = ord;
   filtrados.sort((a, b) => {
@@ -263,7 +277,9 @@ function tabela() {
     <td class="r">${p.total ? fmtR.format(p.total) : '–'}</td></tr>`).join('');
   $('linhas').innerHTML = linhas || '<tr><td colspan="12" class="mut">Nenhum produto com esses filtros.</td></tr>';
   const soma = filtrados.reduce((s, p) => s + p.total, 0);
-  $('conta').textContent = `${fmtI.format(filtrados.length)} produtos · total ${fmtR.format(soma)}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
+  const cMin = $('fCobMin').value, cMax = $('fCobMax').value;
+  const cobTxt = cMin || cMax ? ` · ${$('fCobTipo').value === 'd2' ? 'cobertura F2' : 'cobertura geral'} ${cMin && cMax ? `de ${cMin} a ${cMax}` : cMin ? `a partir de ${cMin}` : `até ${cMax}`} dias (sem consumo fica de fora)` : '';
+  $('conta').textContent = `${fmtI.format(filtrados.length)} produtos · total ${fmtR.format(soma)}${cobTxt}` + (filtrados.length > limite ? ` · mostrando ${fmtI.format(limite)}` : '');
   $('mais').hidden = filtrados.length <= limite;
   document.querySelectorAll('#tbl th').forEach(th => th.setAttribute('aria-sort', th.dataset.k === ord.k ? (ord.dir > 0 ? 'ascending' : 'descending') : 'none'));
 }
@@ -295,11 +311,16 @@ function abrir(t) {
 try { const a = localStorage.getItem('compras.aba'); if (a) abrir(a); } catch (e) {}
 
 // filtros e ordenação
-['fBusca','fIndica','fLista','fCtrl','fSitua'].forEach(id => $(id).addEventListener('input', () => { limite = 200; filtrar(); tabela(); }));
+['fBusca','fIndica','fLista','fCtrl','fSitua','fCobTipo','fCobMin','fCobMax'].forEach(id => $(id).addEventListener('input', () => { limite = 200; filtrar(); tabela(); }));
 document.querySelectorAll('#tbl th').forEach(th => th.addEventListener('click', () => {
   const k = th.dataset.k; ord = {k, dir: ord.k === k ? -ord.dir : (k === 'descr' || k === 'cdpro' || k === 'lista' ? 1 : -1)};
   filtrar(); tabela();
 }));
+$('atalhos').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('fCobMin').value = b.dataset.de ?? ''; $('fCobMax').value = b.dataset.ate ?? '';
+  limite = 200; filtrar(); tabela();
+});
 $('mais').addEventListener('click', () => { limite += 200; tabela(); });
 $('tblListas').addEventListener('click', e => {
   const tr = e.target.closest('tr[data-lista]'); if (!tr) return;
