@@ -1,9 +1,10 @@
 -- compras_produto_fornecedor: fornecedor do lote de entrada mais recente de cada produto.
--- Lotes de FÓRMULA PADRÃO são produção interna e ficam de fora.
+-- Lotes de FÓRMULA PADRÃO são produção interna e ficam de fora; lotes com data futura (erro de
+-- digitação) também. Janela de 3 anos. O n8n escolhe o lote mais recente por produto no nó Code
+-- (a subconsulta correlacionada com MAX(DTENT) é pesada demais na réplica).
 -- Banco: Firebird (Fórmula Certa), réplica.
-SELECT l.CDPRO, l.CDFNR, CAST(l.DTENT AS VARCHAR(10)) AS DTENT
-FROM FC03140 l
-WHERE l.ORLOT <> 'FORMULA PADRAO'
-  AND l.CDFNR IS NOT NULL
-  AND l.DTENT = (SELECT MAX(x.DTENT) FROM FC03140 x
-                 WHERE x.CDPRO = l.CDPRO AND x.ORLOT <> 'FORMULA PADRAO' AND x.CDFNR IS NOT NULL)
+SELECT L.CDPRO, TRIM(L.CDFNR) AS CDFNR, CAST(L.DTENT AS VARCHAR(10)) AS DTENT
+FROM FC03140 L
+WHERE COALESCE(L.ORLOT, '') <> 'FORMULA PADRAO'
+  AND L.CDFNR IS NOT NULL
+  AND L.DTENT BETWEEN CURRENT_DATE - 1095 AND CURRENT_DATE
