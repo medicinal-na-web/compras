@@ -27,6 +27,11 @@ O conteúdo fica em `public._brasa_parts_compras` (partes base64 de 8.000 caract
 `brasa_loader_compras()`. `python3 portal/publicar.py` gera o SQL que guarda a versão anterior em
 `_brasa_parts_compras_bkp_<data>` e troca as partes. Depois de publicar, confira o md5 do loader contra o arquivo.
 
+## Hospedagem sem o Brasa CMS
+`portal/index.html` é uma página estática única para qualquer servidor (por exemplo, o nginx da
+Infalltech): lê `brasa_loader_compras()` com a chave anon, injeta o HTML e recria as tags `<script>`.
+Publicar versões novas continua sendo só no banco; o `index.html` não muda.
+
 ## Peças fora deste arquivo
 - Carga diária do FórmulaCerta: workflow n8n "Compras - Carga FórmulaCerta (réplica)" (`n8n/compras-carga-formulacerta.js`), 5h40.
 - E-mails aos fornecedores: workflow n8n "Compras - Envio de e-mails aos fornecedores" (`n8n/compras-envio-emails.js`), lê a fila `compras_email`.
