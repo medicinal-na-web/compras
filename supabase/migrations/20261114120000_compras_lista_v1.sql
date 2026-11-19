@@ -1,8 +1,8 @@
 -- Lista de compras: replica o painel Power BI LISTADECOMPRAS.V7 (docs/powerbi-lista-de-compras.md).
 --
--- Carga: n8n lê a réplica Firebird e chama compras_sync_produto / compras_sync_estoque /
--- compras_sync_consumo com o resultado das consultas de sql/formula-certa/ (chaves em
--- maiúsculas, como o Firebird devolve). Cada chamada substitui a tabela inteira.
+-- Carga: n8n lê a réplica Firebird e chama compras_carga_produto / _estoque / _consumo em lotes
+-- com o resultado das consultas de sql/formula-certa/ (chaves em maiúsculas, como o Firebird
+-- devolve) e fecha com compras_carga_fechar.
 -- Consumo usa a tabela "DataSet_Compras_12110_18100", criada em 21/07/2026.
 --
 -- Acesso: RLS deny-all; só service_role (n8n e, depois, o portal via funções).
@@ -82,39 +82,45 @@ create trigger compras_parametro_hist
   for each row execute function public.compras_parametro_hist_trg();
 
 -- ---------------------------------------------------------------- carga (n8n)
+--
+-- Mesmo molde das outras cargas da casa: o n8n chama compras_carga_<tabela>(p_linhas, p_carga) em lotes
+-- de 500 (upsert, marcando synced_at = p_carga) e no fim compras_carga_fechar(tabela, p_carga, total),
+-- que confere o total recebido e apaga o que não veio nesta carga.
 
-create or replace function public.compras_sync_produto(p jsonb)
+create or replace function public.compras_carga_produto(p_linhas jsonb, p_carga timestamptz)
 returns integer language plpgsql security definer set search_path = public as $$
 declare n integer;
 begin
-  delete from public.compras_produto where true;
-  insert into public.compras_produto (cdpro, descr, grupo, setor, situa, unida, prcom, prcomn, porta)
-  select "CDPRO", "DESCR", "GRUPO", "SETOR", "SITUA", "UNIDA", "PRCOM", "PRCOMN", "PORTA"
-  from jsonb_to_recordset(p) as x("CDPRO" integer, "DESCR" text, "GRUPO" text, "SETOR" text,
-                                  "SITUA" text, "UNIDA" text, "PRCOM" numeric, "PRCOMN" numeric, "PORTA" text)
-  where "CDPRO" is not null;
+  insert into public.compras_produto (cdpro, descr, grupo, setor, situa, unida, prcom, prcomn, porta, synced_at)
+  select distinct on ("CDPRO") "CDPRO", "DESCR", "GRUPO", "SETOR", "SITUA", "UNIDA", "PRCOM", "PRCOMN", "PORTA", p_carga
+  from jsonb_to_recordset(p_linhas) as x("CDPRO" integer, "DESCR" text, "GRUPO" text, "SETOR" text,
+                                         "SITUA" text, "UNIDA" text, "PRCOM" numeric, "PRCOMN" numeric, "PORTA" text)
+  where "CDPRO" is not null
+  on conflict (cdpro) do update set descr = excluded.descr, grupo = excluded.grupo, setor = excluded.setor,
+    situa = excluded.situa, unida = excluded.unida, prcom = excluded.prcom, prcomn = excluded.prcomn,
+    porta = excluded.porta, synced_at = excluded.synced_at;
   get diagnostics n = row_count;
   return n;
 end $$;
 
-create or replace function public.compras_sync_estoque(p jsonb)
+create or replace function public.compras_carga_estoque(p_linhas jsonb, p_carga timestamptz)
 returns integer language plpgsql security definer set search_path = public as $$
 declare n integer;
 begin
-  delete from public.compras_estoque where true;
-  insert into public.compras_estoque (cdpro, estoque_filial1, estoque_filial2)
-  select "CDPRO", coalesce("ESTOQUEFILIAL1", 0), coalesce("ESTOQUEFILIAL2", 0)
-  from jsonb_to_recordset(p) as x("CDPRO" integer, "ESTOQUEFILIAL1" numeric, "ESTOQUEFILIAL2" numeric)
-  where "CDPRO" is not null;
+  insert into public.compras_estoque (cdpro, estoque_filial1, estoque_filial2, synced_at)
+  select distinct on ("CDPRO") "CDPRO", coalesce("ESTOQUEFILIAL1", 0), coalesce("ESTOQUEFILIAL2", 0), p_carga
+  from jsonb_to_recordset(p_linhas) as x("CDPRO" integer, "ESTOQUEFILIAL1" numeric, "ESTOQUEFILIAL2" numeric)
+  where "CDPRO" is not null
+  on conflict (cdpro) do update set estoque_filial1 = excluded.estoque_filial1,
+    estoque_filial2 = excluded.estoque_filial2, synced_at = excluded.synced_at;
   get diagnostics n = row_count;
   return n;
 end $$;
 
-create or replace function public.compras_sync_consumo(p jsonb)
+create or replace function public.compras_carga_consumo(p_linhas jsonb, p_carga timestamptz)
 returns integer language plpgsql security definer set search_path = public as $$
 declare n integer;
 begin
-  delete from public."DataSet_Compras_12110_18100" where true;
   insert into public."DataSet_Compras_12110_18100" (
     "CDPRO",
     "SomaFrequencia30D", "SomaFisico30D", "SomaCusto30D",
@@ -124,24 +130,54 @@ begin
     "ConsolidadoCusto30D", "ConsolidadoFrequencia30D", "ConsolidadoFisico30D",
     "ConsolidadoCusto90D", "ConsolidadoFrequencia90D", "ConsolidadoFisico90D",
     synced_at)
-  select "CDPRO",
+  select distinct on ("CDPRO") "CDPRO",
     coalesce("SOMAFREQUENCIA30D", 0), coalesce("SOMAFISICO30D", 0), coalesce("SOMACUSTO30D", 0),
     coalesce("SOMAFREQUENCIA90D", 0), coalesce("SOMAFISICO90D", 0), coalesce("SOMACUSTO90D", 0),
     coalesce("SOMAFREQUENCIA30DFP", 0), coalesce("SOMAFISICO30DFP", 0), coalesce("SOMACUSTO30DFP", 0),
     coalesce("SOMAFREQUENCIA90DFP", 0), coalesce("SOMAFISICO90DFP", 0), coalesce("SOMACUSTO90DFP", 0),
     coalesce("CONSOLIDADOCUSTO30D", 0), coalesce("CONSOLIDADOFREQUENCIA30D", 0), coalesce("CONSOLIDADOFISICO30D", 0),
     coalesce("CONSOLIDADOCUSTO90D", 0), coalesce("CONSOLIDADOFREQUENCIA90D", 0), coalesce("CONSOLIDADOFISICO90D", 0),
-    now()
-  from jsonb_to_recordset(p) as x("CDPRO" integer,
+    p_carga
+  from jsonb_to_recordset(p_linhas) as x("CDPRO" integer,
     "SOMAFREQUENCIA30D" numeric, "SOMAFISICO30D" numeric, "SOMACUSTO30D" numeric,
     "SOMAFREQUENCIA90D" numeric, "SOMAFISICO90D" numeric, "SOMACUSTO90D" numeric,
     "SOMAFREQUENCIA30DFP" numeric, "SOMAFISICO30DFP" numeric, "SOMACUSTO30DFP" numeric,
     "SOMAFREQUENCIA90DFP" numeric, "SOMAFISICO90DFP" numeric, "SOMACUSTO90DFP" numeric,
     "CONSOLIDADOCUSTO30D" numeric, "CONSOLIDADOFREQUENCIA30D" numeric, "CONSOLIDADOFISICO30D" numeric,
     "CONSOLIDADOCUSTO90D" numeric, "CONSOLIDADOFREQUENCIA90D" numeric, "CONSOLIDADOFISICO90D" numeric)
-  where "CDPRO" is not null;
+  where "CDPRO" is not null
+  on conflict ("CDPRO") do update set
+    "SomaFrequencia30D" = excluded."SomaFrequencia30D", "SomaFisico30D" = excluded."SomaFisico30D", "SomaCusto30D" = excluded."SomaCusto30D",
+    "SomaFrequencia90D" = excluded."SomaFrequencia90D", "SomaFisico90D" = excluded."SomaFisico90D", "SomaCusto90D" = excluded."SomaCusto90D",
+    "SomaFrequencia30DFP" = excluded."SomaFrequencia30DFP", "SomaFisico30DFP" = excluded."SomaFisico30DFP", "SomaCusto30DFP" = excluded."SomaCusto30DFP",
+    "SomaFrequencia90DFP" = excluded."SomaFrequencia90DFP", "SomaFisico90DFP" = excluded."SomaFisico90DFP", "SomaCusto90DFP" = excluded."SomaCusto90DFP",
+    "ConsolidadoCusto30D" = excluded."ConsolidadoCusto30D", "ConsolidadoFrequencia30D" = excluded."ConsolidadoFrequencia30D",
+    "ConsolidadoFisico30D" = excluded."ConsolidadoFisico30D", "ConsolidadoCusto90D" = excluded."ConsolidadoCusto90D",
+    "ConsolidadoFrequencia90D" = excluded."ConsolidadoFrequencia90D", "ConsolidadoFisico90D" = excluded."ConsolidadoFisico90D",
+    synced_at = excluded.synced_at;
   get diagnostics n = row_count;
   return n;
+end $$;
+
+-- fecha uma carga: confere quantas linhas têm synced_at = p_carga e apaga as que não vieram.
+-- p_total = soma do que as chamadas compras_carga_* devolveram (linhas aceitas; linhas sem chave
+-- são descartadas na entrada). Se não bate, não apaga nada e avisa (a carga parou no meio).
+create or replace function public.compras_carga_fechar(p_tabela text, p_carga timestamptz, p_total integer)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare tabela text; recebidas integer; apagadas integer := 0;
+begin
+  tabela := case p_tabela
+    when 'produto' then 'compras_produto' when 'estoque' then 'compras_estoque'
+    when 'consumo' then 'DataSet_Compras_12110_18100'
+    when 'fornecedor' then 'compras_fornecedor' when 'produto_fornecedor' then 'compras_produto_fornecedor' end;
+  if tabela is null then raise exception 'Tabela de carga desconhecida: %', p_tabela; end if;
+  execute format('select count(*) from public.%I where synced_at = $1', tabela) into recebidas using p_carga;
+  if recebidas <> p_total then
+    return jsonb_build_object('tabela', tabela, 'ok', false, 'esperadas', p_total, 'recebidas', recebidas);
+  end if;
+  execute format('delete from public.%I where synced_at <> $1', tabela) using p_carga;
+  get diagnostics apagadas = row_count;
+  return jsonb_build_object('tabela', tabela, 'ok', true, 'recebidas', recebidas, 'apagadas', apagadas);
 end $$;
 
 -- ---------------------------------------------------------------- lista de compras
@@ -262,9 +298,10 @@ alter table public.compras_parametro_hist enable row level security;
 revoke all on public.compras_produto, public.compras_estoque, public.compras_parametro,
               public.compras_parametro_hist, public.compras_lista
   from anon, authenticated;
-revoke all on function public.compras_sync_produto(jsonb), public.compras_sync_estoque(jsonb),
-                       public.compras_sync_consumo(jsonb), public.compras_parametro_hist_trg()
+revoke all on function public.compras_carga_produto(jsonb, timestamptz), public.compras_carga_estoque(jsonb, timestamptz),
+                       public.compras_carga_consumo(jsonb, timestamptz), public.compras_carga_fechar(text, timestamptz, integer),
+                       public.compras_parametro_hist_trg()
   from public, anon, authenticated;
-grant execute on function public.compras_sync_produto(jsonb), public.compras_sync_estoque(jsonb),
-                          public.compras_sync_consumo(jsonb)
+grant execute on function public.compras_carga_produto(jsonb, timestamptz), public.compras_carga_estoque(jsonb, timestamptz),
+                          public.compras_carga_consumo(jsonb, timestamptz), public.compras_carga_fechar(text, timestamptz, integer)
   to service_role;
