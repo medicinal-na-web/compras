@@ -142,6 +142,24 @@
 #cmproot .login .err{color:var(--err); font-size:14px; min-height:20px; margin-top:10px}
 #cmproot .login .ok{color:var(--ok); font-size:14px; min-height:20px; margin-top:4px}
 #cmproot .carregando{padding:40px 16px; text-align:center; color:var(--mut)}
+#cmproot .ciclobar{position:sticky; top:0; z-index:4; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; justify-content:space-between; background:var(--card); border:2px solid var(--brand); border-radius:12px; padding:10px 14px; box-shadow:var(--shadow)}
+#cmproot .ciclobar .sub small{display:block; font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--brand)}
+#cmproot .ciclobar .sub b{font-size:26px; line-height:1.15; font-variant-numeric:tabular-nums}
+#cmproot .ciclobar .sub span{display:block; font-size:12px; color:var(--mut)}
+#cmproot .ciclobar button{font-size:15px; padding:11px 18px}
+#cmproot .passos{display:flex; flex-wrap:wrap; align-items:center; gap:6px}
+#cmproot .passos .passo{background:var(--bg); color:var(--mut); border:1px solid var(--line); font-size:12.5px; padding:5px 11px; border-radius:999px}
+#cmproot .passos .passo b{display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; background:var(--line); color:var(--ink); font-size:11px; margin-right:4px}
+#cmproot .passos .passo.on{background:var(--brand); color:#fff; border-color:var(--brand)}
+#cmproot .passos .passo.on b{background:#fff; color:var(--brand)}
+#cmproot .passos .seta{color:var(--mut); font-size:13px}
+#cmproot .passos .st{margin-left:6px}
+#cmproot .bloco{border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px}
+#cmproot .bloco h3{font-size:14px}
+#cmproot .destaque{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums}
+#cmproot .qcic{width:90px; text-align:right; font-weight:700; padding:3px 6px}
+#cmproot .prazo{background:var(--okbg); color:var(--ok); border-radius:10px; padding:8px 12px; font-weight:700}
+#cmproot .prazo.fim{background:var(--errbg); color:var(--err)}
 #cmproot .acform{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; align-items:end}
 @media (min-width:701px){
   #cmproot.app .wrap{height:calc(100dvh - var(--hdr, 130px))}
@@ -185,12 +203,13 @@
   <div class="brand"><i class="dot"></i><div><b>Portal de Compras</b></div></div>
   <nav class="tabs" role="tablist">
     <button role="tab" aria-selected="true" data-tab="lista">Lista de compras</button>
+    <button role="tab" aria-selected="false" data-tab="revisar">2 · Revisar e incluir</button>
+    <button role="tab" aria-selected="false" data-tab="lancar">3 · Lançar ciclo</button>
+    <button role="tab" aria-selected="false" data-tab="pedido">Pedido por fornecedor</button>
+    <button role="tab" aria-selected="false" data-tab="fornec">Fornecedores</button>
     <button role="tab" aria-selected="false" data-tab="curvas">Curvas e listas</button>
     <button role="tab" aria-selected="false" data-tab="param">Parâmetros</button>
     <button role="tab" aria-selected="false" data-tab="regras">Como é calculado</button>
-    <button role="tab" aria-selected="false" data-tab="ciclo">Ciclo de compras</button>
-    <button role="tab" aria-selected="false" data-tab="pedido">Pedido por fornecedor</button>
-    <button role="tab" aria-selected="false" data-tab="fornec">Fornecedores</button>
     <button role="tab" aria-selected="false" data-tab="acessos">Acessos</button>
   </nav>
   <div class="quem"><span id="cmpQuem"></span><button class="sec mini" id="cmpAtualizar" title="Recarregar os dados">Atualizar</button><button class="sec mini" id="cmpSair">Sair</button></div>
@@ -202,10 +221,16 @@
   <p class="msg e" id="errApp" role="alert" hidden></p>
 
   <section id="sec-lista" class="card">
+    <div id="passosLista"></div>
+    <div class="ciclobar" id="cicloBar" hidden>
+      <div class="sub"><small>Subtotal do ciclo</small><b id="cbTotal">R$ 0,00</b><span id="cbInfo"></span></div>
+      <button id="aplicarCiclo">Seguir para revisão →</button>
+    </div>
     <div class="aviso" id="avisoForn" hidden>
       <span><b>Cotação</b> da Medicinal · <span id="fornNomeTopo"></span></span>
       <select id="fornEscopo" aria-label="Itens"><option value="meus" selected>Itens que você costuma fornecer</option><option value="todos">Todos os itens da cotação</option></select>
       <span class="mut">Informe o preço por unidade e a quantidade mínima de venda. Depois do primeiro preço, só é possível reduzir.</span>
+      <span class="prazo" id="fornPrazo" hidden></span>
     </div>
     <div class="filtros">
       <div><label for="fBusca">Buscar (código ou descrição)</label><input id="fBusca" placeholder="ex.: 10928, pullulan"></div>
@@ -229,7 +254,7 @@
         <p class="mut" id="conta" style="font-size:13px"></p>
         <div class="legenda"><span>Impacto no pedido</span><span class="barra" aria-hidden="true"></span><span id="pareto"></span></div>
       </div>
-      <div class="row"><button class="mini" id="aplicarCiclo" hidden></button><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
+      <div class="row"><button class="sec mini perigo" id="desfazer" hidden></button><button class="sec mini" id="copiar">Copiar para Excel</button><span class="msg" id="msgCopia" role="status"></span></div>
     </div>
     <div class="tw" id="twForn"><table class="tbl" id="tblForn"><thead><tr>
       <th>Descrição</th><th class="r">Quantidade</th><th class="r" title="Menor quantidade que você vende deste item">Qtd. mínima</th>
@@ -279,17 +304,52 @@
     <div class="row"><button id="salvarParam">Salvar e recalcular</button><button class="sec" id="padrao">Valores do Power BI</button><span class="msg" id="msgParam" role="status"></span></div>
   </section>
 
-  <section id="sec-ciclo" class="card" hidden>
+  <section id="sec-revisar" class="card" hidden>
+    <div id="passosRevisar"></div>
+    <div class="ciclo-top"><h2 id="rvTitulo">Revisar e incluir</h2><div class="row"><span class="mut">Subtotal</span><span class="destaque" id="rvTotal">R$ 0,00</span></div></div>
+    <p class="msg e" id="rvAviso" hidden></p>
+    <div class="mini-kpis" id="rvKpis"></div>
+    <div class="tw" id="twRv" style="max-height:calc(100dvh - var(--hdr, 130px) - 360px)"><table class="tbl"><thead><tr>
+      <th>Cód.</th><th>Descrição</th><th>Lista</th><th class="r">Quantidade</th><th class="r">Preço compra</th><th class="r">Total</th><th>Fornecedor habitual</th><th></th>
+    </tr></thead><tbody id="linhasRv"></tbody></table></div>
+    <div class="apos" id="rvRet" hidden style="background:var(--errbg)"></div>
+    <div class="filtros" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); align-items:start">
+      <div class="bloco">
+        <h3>Incluir produto cadastrado (fora da sugestão)</h3>
+        <div class="row" style="flex-wrap:nowrap"><input id="rvBusca" placeholder="código ou parte da descrição"><button class="sec" id="rvBuscar">Buscar</button></div>
+        <div class="tw" style="max-height:240px" id="rvRes" hidden><table class="tbl"><tbody id="linhasBusca"></tbody></table></div>
+      </div>
+      <div class="bloco">
+        <h3>Incluir item não cadastrado no FórmulaCerta</h3>
+        <div class="acform" style="grid-template-columns:2fr 1fr 1fr">
+          <div><label for="avDescr">Descrição</label><input id="avDescr" placeholder="ex.: frasco âmbar 100 ml"></div>
+          <div><label for="avUnid">Unidade</label><input id="avUnid" placeholder="UN, G, ML"></div>
+          <div><label for="avQtd">Quantidade</label><input id="avQtd" inputmode="decimal"></div>
+        </div>
+        <div><button class="sec" id="avIncluir">Incluir no ciclo</button></div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between"><button class="sec" data-ir="lista">← Voltar à escolha dos produtos</button><span class="msg" id="rvMsg" role="status"></span><button data-ir="lancar">Seguir para lançamento →</button></div>
+  </section>
+
+  <section id="sec-lancar" class="card" hidden>
+    <div id="passosLancar"></div>
     <div class="ciclo-top">
       <div class="row"><h2 id="cicloTitulo"></h2><select id="cicloVer" aria-label="Ver ciclo" style="width:auto"></select></div>
       <div class="row" id="cicloAcoes"></div>
     </div>
     <div class="datas" id="cicloDatas"></div>
     <div class="mini-kpis" id="cicloKpis"></div>
+    <div class="bloco" id="lcPrazoBloco" hidden>
+      <h3 id="lcPrazoTitulo">Fechamento da cotação</h3>
+      <p class="mut" id="lcPrazoTexto" style="font-size:13px"></p>
+      <div class="row"><div style="flex:0 1 240px"><label for="lcPrazo">Data e hora de fechamento (Brasília)</label><input id="lcPrazo" type="datetime-local"></div>
+        <button id="lcBotao"></button><span class="msg" id="lcMsg" role="status"></span></div>
+    </div>
     <div class="apos" id="cicloApos" hidden></div>
     <div class="apos" id="cicloRet" hidden style="background:var(--errbg)"></div>
     <div class="tw" id="twCiclo"><table class="tbl" id="tblCiclo"><thead><tr>
-      <th>Cód.</th><th>Descrição</th><th>Lista</th><th class="r">Quantidade</th><th class="r">Preço compra</th><th class="r">Total</th><th>Fornecedor habitual</th><th class="r">Cotações</th><th class="r">Menor preço</th><th>Entrou em</th><th></th>
+      <th>Cód.</th><th>Descrição</th><th>Lista</th><th class="r">Quantidade</th><th class="r">Preço compra</th><th class="r">Total</th><th>Fornecedor habitual</th><th class="r">Cotações</th><th class="r">Menor preço</th><th>Entrou em</th>
     </tr></thead><tbody id="linhasCiclo"></tbody></table></div>
     <div class="emails" id="cicloEmails" hidden></div>
     <p class="mut" id="cicloHist" style="font-size:12.5px"></p>
@@ -483,12 +543,12 @@ var prods = [], porCd = {}, ATUALIZADO = null;
 var CIC = null;          // detalhe do ciclo mostrado na aba Ciclo
 var ATIVO = null;        // ciclo ativo (montagem ou aberto): {id, status, itens: {cdpro: true}}
 var CICLOS = [];
-var COTS = [], COT_CICLO = null;   // cotação do fornecedor
+var COTS = [], COT_CICLO = null, COT_FECHA = null, COT_FECHADA = false;   // cotação do fornecedor
 var CAD = null, ACESSOS = null;
 var SEL = new Set();
 var PERFIS = {
-  admin:      {abas:['lista','curvas','ciclo','pedido','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
-  comprador:  {abas:['lista','ciclo','pedido','param','regras','fornec'], internos:true, valores:true, ajusta:true, param:false, curvas:false, ocultar:[8, 9, 14]},
+  admin:      {abas:['lista','revisar','lancar','curvas','pedido','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
+  comprador:  {abas:['lista','revisar','lancar','pedido','param','regras','fornec'], internos:true, valores:true, ajusta:true, param:false, curvas:false, ocultar:[8, 9, 14]},
   producao:   {abas:['lista','curvas','param','regras'],        internos:true, valores:false, ajusta:false, param:false, curvas:true},
   fornecedor: {abas:['lista'], internos:false, valores:false, ajusta:false, param:false, curvas:false, forn:true}
 };
@@ -530,13 +590,14 @@ async function carregaTudo(){
   try{
     if (PERM.forn) { await carregaCotacao(); }
     else {
+      if (PERM.ajusta) { try{ await rpc('compras_ciclo_travar_vencidos', {}); }catch(e){} }
       var r = await Promise.all([rpc('compras_lista_compacta', {}), rpc('compras_parametros', {}), PERM.ajusta ? rpc('compras_ciclo_detalhe', {}) : null]);
       montaLista(r[0]); montaParam(r[1]);
-      if (PERM.ajusta) montaAtivo(r[2]);
+      if (PERM.ajusta) { montaAtivo(r[2]); desenhaPassos(); }
     }
     filtrar(); tabela(); if (!PERM.forn) curvas();
     var aba = R.querySelector('nav.tabs button[aria-selected="true"]');
-    if (aba && aba.dataset.tab === 'ciclo') await ciclo();
+    if (aba && (aba.dataset.tab === 'revisar' || aba.dataset.tab === 'lancar')) await ciclo();
     if (aba && aba.dataset.tab === 'fornec') { CAD = null; await cadastro(); }
     if (aba && aba.dataset.tab === 'acessos') { await acessos(); }
   }catch(e){ falha(e); }
@@ -574,12 +635,12 @@ function montaParam(x){
 function montaAtivo(d){
   ATIVO = null;
   if (d && d.ciclo && d.ciclo.status !== 'travado') {
-    ATIVO = {id: d.ciclo.id, status: d.ciclo.status, itens: {}};
-    (d.itens || []).forEach(function(i){ if (!i.retirado_em) ATIVO.itens[i.cdpro] = true; });
+    ATIVO = {id: d.ciclo.id, status: d.ciclo.status, fecha_em: d.ciclo.fecha_em, fechado: d.ciclo.fechado_para_fornecedor, det: d, itens: {}, total: 0, n: 0};
+    (d.itens || []).forEach(function(i){ if (!i.retirado_em) { var t = (+i.prcomn || 0) * (+i.quantidade || 0); ATIVO.itens[i.cdpro] = t; ATIVO.total += t; ATIVO.n++; } });
   }
 }
 async function recarregaAtivo(){ montaAtivo(await rpc('compras_ciclo_detalhe', {})); }
-var cicloDoItem = function(cd){ return ATIVO && ATIVO.itens[cd] ? ATIVO : null; };
+var cicloDoItem = function(cd){ return ATIVO && (cd in ATIVO.itens) ? ATIVO : null; };
 
 /* ---------------- KPIs ---------------- */
 function kpis(){
@@ -688,6 +749,7 @@ function tabela(){
   kpis();
   if (PERM.forn) {
     $('linhasForn').innerHTML = linhasFornecedor();
+    if (COT_FECHADA) R.querySelectorAll('#linhasForn input, #linhasForn button').forEach(function(x){ x.disabled = true; });
     $('conta').textContent = fmtI.format(filtrados.length) + ' itens' + (filtrados.length > limite ? ' · mostrando ' + fmtI.format(limite) : '');
     $('mais').hidden = filtrados.length <= limite; $('desfazer').hidden = true;
     return;
@@ -764,14 +826,38 @@ function botaoCiclo(){
   st.checked = m.length > 0 && m.every(function(p){ return SEL.has(p.cdpro); });
   st.indeterminate = !st.checked && m.some(function(p){ return SEL.has(p.cdpro); });
   st.disabled = !m.length; st.hidden = !PERM.ajusta;
+  atualizaBarra();
 }
+function atualizaBarra(){
+  $('cicloBar').hidden = !PERM.ajusta;
+  if (!PERM.ajusta) return;
+  var marc = 0, nm = 0;
+  SEL.forEach(function(cd){ var p = porCd[cd]; if (p) { marc += p.prcomn * p.qtdF; nm++; } });
+  var noCiclo = ATIVO ? ATIVO.total : 0, nc = ATIVO ? ATIVO.n : 0;
+  $('cbTotal').textContent = fmtR.format(noCiclo + marc);
+  $('cbInfo').textContent = (ATIVO ? 'Ciclo ' + ATIVO.id + ' (' + NOME_ST[ATIVO.status] + '): ' + fmtI.format(nc) + (nc === 1 ? ' item ' : ' itens ') + fmtR.format(noCiclo) : 'Novo ciclo')
+    + (nm ? ' + ' + fmtI.format(nm) + (nm === 1 ? ' marcado ' : ' marcados ') + fmtR.format(marc) : ' · marque os itens na lista');
+  $('aplicarCiclo').textContent = nm ? 'Aplicar ' + fmtI.format(nm) + (nm === 1 ? ' item' : ' itens') + ' e seguir para revisão →' : 'Seguir para revisão →';
+}
+function passos(cur){
+  var nomes = [['lista', '1', 'Escolher produtos'], ['revisar', '2', 'Revisar e incluir'], ['lancar', '3', 'Lançar ciclo']];
+  return '<div class="passos">' + nomes.map(function(n){ return '<button class="passo' + (n[0] === cur ? ' on' : '') + '" data-ir="' + n[0] + '"><b>' + n[1] + '</b>' + n[2] + '</button>'; }).join('<span class="seta">→</span>')
+    + (ATIVO ? '<span class="st ' + ATIVO.status + '">Ciclo ' + ATIVO.id + ' · ' + NOME_ST[ATIVO.status] + '</span>' : '<span class="mut" style="font-size:12px; margin-left:6px">Nenhum ciclo ativo: o próximo começa ao aplicar itens</span>') + '</div>';
+}
+function desenhaPassos(){
+  if (!PERM.ajusta) { $('passosLista').innerHTML = ''; return; }
+  $('passosLista').innerHTML = passos('lista'); $('passosRevisar').innerHTML = passos('revisar'); $('passosLancar').innerHTML = passos('lancar');
+}
+R.addEventListener('click', function(e){ var b = e.target.closest('[data-ir]'); if (b && R.contains(b)) abrir(b.dataset.ir); });
 $('aplicarCiclo').addEventListener('click', async function(){
-  var b = $('aplicarCiclo'); b.disabled = true;
+  var b = $('aplicarCiclo');
+  if (!SEL.size) { abrir('revisar'); return; }
+  b.disabled = true;
   try{
     var r = await rpc('compras_ciclo_aplicar', {p_cdpros: Array.from(SEL)});
     SEL.clear(); await recarregaAtivo();
-    $('msgCopia').textContent = fmtI.format(r.incluidos) + (r.incluidos === 1 ? ' item entrou' : ' itens entraram') + ' no ciclo ' + r.ciclo + (r.status === 'aberto' ? ' depois da abertura; os fornecedores recebem aviso por e-mail.' : '.');
-    tabela();
+    $('rvMsg').textContent = fmtI.format(r.incluidos) + (r.incluidos === 1 ? ' item entrou' : ' itens entraram') + ' no ciclo ' + r.ciclo + (r.status === 'aberto' ? ' depois da abertura; os fornecedores recebem aviso por e-mail.' : '.');
+    tabela(); abrir('revisar');
   }catch(e){ falha(e); }
   finally{ b.disabled = false; }
 });
@@ -789,82 +875,178 @@ $('selTodos').addEventListener('change', function(){
   tabela();
 });
 
-/* ---------------- aba Ciclo ---------------- */
-var confirmaCiclo = '', verId = null;
+/* ---------------- etapas 2 (revisar e incluir) e 3 (lançar) ---------------- */
+var confirmaCiclo = '', verId = null, BUSCA = [];
 var TIPO_EMAIL = {convite:'<span class="chip">convite</span>', inclusao:'<span class="chip warn">inclusão</span>', retirada:'<span class="chip err">retirada</span>'};
-var ST_EMAIL = {pendente:'<span class="chip">na fila</span>', enviado:'<span class="chip ok">enviado</span>', sem_destinatario:'<span class="chip warn">não enviado: fornecedor sem acesso liberado</span>', erro:'<span class="chip err">erro no envio</span>'};
+var ST_EMAIL = {pendente:'<span class="chip">na fila de envio</span>', enviado:'<span class="chip ok">enviado</span>', sem_destinatario:'<span class="chip warn">não enviado: fornecedor sem acesso liberado</span>', erro:'<span class="chip err">erro no envio</span>'};
+var dataHora = function(iso){ return iso ? new Date(iso).toLocaleString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '–'; };
+function faltam(iso){
+  var ms = new Date(iso) - Date.now(); if (ms <= 0) return 'encerrado';
+  var h = Math.floor(ms / 3600000), d = Math.floor(h / 24);
+  return d >= 1 ? 'faltam ' + d + (d === 1 ? ' dia e ' : ' dias e ') + (h % 24) + ' h' : 'faltam ' + h + ' h ' + Math.floor(ms % 3600000 / 60000) + ' min';
+}
+function localInput(dt){ var z = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000); return z.toISOString().slice(0, 16); }
 async function ciclo(){
   try{
-    var r = await Promise.all([rpc('compras_ciclos_listar', {}), rpc('compras_ciclo_detalhe', verId ? {p_ciclo: verId} : {})]);
+    var r = await Promise.all([rpc('compras_ciclos_listar', {}), rpc('compras_ciclo_detalhe', verId ? {p_ciclo: verId} : {}), verId ? rpc('compras_ciclo_detalhe', {}) : null]);
     CICLOS = r[0] || []; CIC = r[1];
+    montaAtivo(verId ? r[2] : r[1]);
   }catch(e){ falha(e); return; }
-  desenhaCiclo();
+  desenhaPassos(); atualizaBarra(); desenhaRevisar(); desenhaCiclo();
 }
+var totItem = function(i){ return (+i.prcomn || 0) * (+i.quantidade || 0); };
+function desenhaRevisar(){
+  var d = ATIVO && ATIVO.det, its = d ? d.itens.filter(function(i){ return !i.retirado_em; }) : [], ret = d ? d.itens.filter(function(i){ return i.retirado_em; }) : [];
+  $('rvTitulo').textContent = ATIVO ? 'Ciclo ' + ATIVO.id + ' · revisar e incluir' : 'Revisar e incluir';
+  $('rvTotal').textContent = fmtR.format(its.reduce(function(s, i){ return s + totItem(i); }, 0));
+  var av = $('rvAviso');
+  av.hidden = !(ATIVO && ATIVO.fechado);
+  av.textContent = ATIVO && ATIVO.fechado ? 'A cotação deste ciclo já fechou. Mude o prazo na etapa 3 para incluir itens, ou trave o ciclo.' : '';
+  $('rvKpis').innerHTML = [['Itens', fmtI.format(its.length)], ['Fora da sugestão', fmtI.format(its.filter(function(i){ return !i.sugerido && !i.avulso; }).length)],
+    ['Não cadastrados', fmtI.format(its.filter(function(i){ return i.avulso; }).length)], ['Sem preço de referência', fmtI.format(its.filter(function(i){ return !+i.prcomn; }).length)]]
+    .map(function(k){ return '<div class="kpi"><small>' + k[0] + '</small><b>' + k[1] + '</b></div>'; }).join('');
+  $('linhasRv').innerHTML = its.map(function(i){
+    var cod = i.avulso ? '<span class="chip">não cadastrado</span>' : i.cdpro;
+    var chips = (i.avulso ? '' : (!i.sugerido ? ' <span class="chip warn">fora da sugestão</span>' : '')) + (i.apos_abertura ? ' <span class="chip warn">após abertura</span>' : '');
+    var q = '<input class="qcic" data-qcic="' + i.cdpro + '" inputmode="decimal" value="' + String(+i.quantidade).replace('.', ',') + '" aria-label="Quantidade de ' + esc(i.descr) + '"> ' + esc(i.unida || '')
+      + (i.qtd_definida && !i.avulso ? '<div class="qsug">lista: ' + fmtI.format(i.qtd_lista) + ' · <button data-qvolta="' + i.cdpro + '">usar a da lista</button></div>' : '');
+    return '<tr class="' + (i.lista && i.lista <= 3 ? 'l' + i.lista : '') + '"><td>' + cod + '</td><td class="desc">' + esc(i.descr) + chips + '</td><td>' + importancia(i.lista) + '</td>'
+      + '<td class="r">' + q + '</td><td class="r">' + (+i.prcomn ? fmtR.format(i.prcomn) : '<span class="mut">–</span>') + '</td><td class="r">' + (totItem(i) ? fmtR.format(totItem(i)) : '–') + '</td>'
+      + '<td>' + esc(i.fornecedor || '–') + '</td><td><button class="sec mini" data-tirar="' + i.cdpro + '">' + (ATIVO && ATIVO.status === 'aberto' ? 'retirar' : 'tirar') + '</button></td></tr>';
+  }).join('') || '<tr><td colspan="8" class="mut">Nenhum item no ciclo ainda. Escolha os produtos na etapa 1 ou inclua abaixo.</td></tr>';
+  $('rvRet').hidden = !ret.length;
+  $('rvRet').innerHTML = '<h3>Retirados após a abertura (' + ret.length + ')</h3><ul>' + ret.map(function(i){ return '<li><b>' + esc(i.descr) + '</b> · retirado em ' + fmtD(i.retirado_em) + '</li>'; }).join('') + '</ul>';
+  desenhaBusca();
+}
+function desenhaBusca(){
+  $('rvRes').hidden = !BUSCA.length;
+  $('linhasBusca').innerHTML = BUSCA.map(function(p){
+    var no = ATIVO && (p.cdpro in ATIVO.itens);
+    return '<tr data-bcd="' + p.cdpro + '"><td>' + p.cdpro + '</td><td class="desc">' + esc(p.descr) + (p.situa !== 'A' ? ' <span class="chip">inativo</span>' : '') + '<div class="qsug">' + esc(p.fornecedor || 'sem fornecedor') + (+p.prcomn ? ' · ' + fmtR.format(p.prcomn) + '/' + esc(p.unida) : '') + '</div></td>'
+      + '<td class="r">' + (no ? '<span class="chip ok">no ciclo</span>' : '<input class="qcic" data-bq inputmode="decimal" value="' + (+p.qtd_sugerida || '') + '" placeholder="qtd"> ' + esc(p.unida || '')) + '</td>'
+      + '<td>' + (no ? '' : '<button class="sec mini" data-incluir="' + p.cdpro + '">Incluir</button>') + '</td></tr>';
+  }).join('');
+}
+async function buscarProdutos(){
+  var q = $('rvBusca').value.trim(); if (q.length < 2) { $('rvMsg').textContent = 'Digite pelo menos 2 letras ou o código.'; return; }
+  $('rvBuscar').disabled = true;
+  try{ BUSCA = await rpc('compras_produtos_buscar', {p_q: q}) || []; desenhaBusca(); $('rvMsg').textContent = BUSCA.length ? '' : 'Nenhum produto encontrado.'; }
+  catch(e){ falha(e); } finally{ $('rvBuscar').disabled = false; }
+}
+$('rvBuscar').addEventListener('click', buscarProdutos);
+$('rvBusca').addEventListener('keydown', function(e){ if (e.key === 'Enter') buscarProdutos(); });
+async function depoisDeMudar(msg){ await ciclo(); filtrar(); tabela(); if (msg) $('rvMsg').textContent = msg; }
+$('linhasBusca').addEventListener('click', async function(e){
+  var b = e.target.closest('button[data-incluir]'); if (!b) return;
+  var tr = b.closest('tr'), q = lerNum(tr.querySelector('input[data-bq]').value);
+  if (!(q > 0)) { $('rvMsg').textContent = 'Informe a quantidade.'; return; }
+  b.disabled = true;
+  try{ var r = await rpc('compras_ciclo_incluir', {p_cdpro: +b.dataset.incluir, p_quantidade: q}); await depoisDeMudar('Produto incluído no ciclo ' + r.ciclo + (r.status === 'aberto' ? '; o fornecedor habitual recebe aviso.' : '.')); }
+  catch(e){ falha(e); b.disabled = false; }
+});
+$('avIncluir').addEventListener('click', async function(){
+  var d = $('avDescr').value.trim(), u = $('avUnid').value.trim(), q = lerNum($('avQtd').value);
+  if (!d) { $('rvMsg').textContent = 'Informe a descrição do item.'; return; }
+  if (!(q > 0)) { $('rvMsg').textContent = 'Informe a quantidade.'; return; }
+  $('avIncluir').disabled = true;
+  try{ var r = await rpc('compras_ciclo_avulso', {p_descr: d, p_unida: u, p_quantidade: q}); $('avDescr').value = $('avUnid').value = $('avQtd').value = ''; await depoisDeMudar('Item não cadastrado incluído no ciclo ' + r.ciclo + (r.status === 'aberto' ? '; os fornecedores com acesso recebem aviso.' : '.')); }
+  catch(e){ falha(e); } finally{ $('avIncluir').disabled = false; }
+});
+$('linhasRv').addEventListener('change', async function(e){
+  var i = e.target.closest('input[data-qcic]'); if (!i) return;
+  var v = lerNum(i.value); if (!(v >= 0)) { desenhaRevisar(); return; }
+  try{ await rpc('compras_ciclo_quantidade', {p_cdpro: +i.dataset.qcic, p_quantidade: v}); await depoisDeMudar(''); }catch(e){ falha(e); desenhaRevisar(); }
+});
+$('linhasRv').addEventListener('keydown', function(e){ if (e.key === 'Enter' && e.target.matches('input[data-qcic]')) e.target.blur(); });
+$('linhasRv').addEventListener('click', async function(e){
+  var v = e.target.closest('button[data-qvolta]');
+  if (v) { try{ await rpc('compras_ciclo_quantidade', {p_cdpro: +v.dataset.qvolta, p_quantidade: null}); await depoisDeMudar(''); }catch(er){ falha(er); } return; }
+  var b = e.target.closest('button[data-tirar]'); if (!b) return;
+  b.disabled = true; await retirar(b.dataset.tirar); await depoisDeMudar('');
+});
+
 function desenhaCiclo(){
   var sv = $('cicloVer');
   sv.innerHTML = CICLOS.map(function(c){ return '<option value="' + c.id + '">Ciclo ' + c.id + ' · ' + NOME_ST[c.status] + ' · ' + c.itens + ' itens</option>'; }).join('');
   sv.hidden = CICLOS.length < 2;
-  var acoes = $('cicloAcoes');
+  var acoes = $('cicloAcoes'), pb = $('lcPrazoBloco');
   if (!CIC) {
-    $('cicloTitulo').innerHTML = 'Nenhum ciclo ainda <span class="st montagem">vazio</span>';
-    $('cicloDatas').textContent = ''; $('cicloKpis').innerHTML = ''; $('cicloApos').hidden = $('cicloRet').hidden = $('cicloEmails').hidden = true;
-    acoes.innerHTML = '';
-    $('linhasCiclo').innerHTML = '<tr><td colspan="11" class="mut">Na Lista de compras, filtre os itens, marque (o quadradinho do cabeçalho marca todos do filtro), desmarque o que não deve entrar e clique em "Aplicar ao próximo ciclo". Repita com outros filtros até montar o ciclo.</td></tr>';
-    $('cicloHist').textContent = '';
+    $('cicloTitulo').innerHTML = 'Nenhum ciclo ainda'; $('cicloDatas').textContent = ''; $('cicloKpis').innerHTML = ''; acoes.innerHTML = '';
+    pb.hidden = $('cicloApos').hidden = $('cicloRet').hidden = $('cicloEmails').hidden = true;
+    $('linhasCiclo').innerHTML = '<tr><td colspan="10" class="mut">Comece pela etapa 1: escolha os produtos e aplique ao ciclo.</td></tr>'; $('cicloHist').textContent = '';
     return;
   }
-  var c = CIC.ciclo; verId = c.id; sv.value = String(c.id);
+  var c = CIC.ciclo; verId = verId || null; sv.value = String(c.id);
   var ps = CIC.itens.filter(function(i){ return !i.retirado_em; }), ret = CIC.itens.filter(function(i){ return i.retirado_em; });
-  var apos = ps.filter(function(i){ return i.apos_abertura; });
-  var tot = function(i){ return (+i.prcomn || 0) * (+i.quantidade || 0); };
-  var em = CIC.emails || [];
-  var nEm = function(t){ return em.filter(function(m){ return m.tipo === t && m.status === 'enviado'; }).length; };
+  var apos = ps.filter(function(i){ return i.apos_abertura; }), em = CIC.emails || [];
+  var nEm = function(t, st){ return em.filter(function(m){ return m.tipo === t && (!st || m.status === st); }).length; };
+  var habituais = new Set(ps.map(function(i){ return i.cnpj; }).filter(Boolean)).size;
   $('cicloTitulo').innerHTML = 'Ciclo ' + c.id + ' <span class="st ' + c.status + '">' + NOME_ST[c.status] + '</span>';
-  $('cicloDatas').innerHTML = '<span>Criado ' + fmtD(c.criado_em) + (c.criado_por ? ' por ' + esc(c.criado_por) : '') + '</span><span>Aberto ' + fmtD(c.aberto_em) + '</span><span>Travado ' + fmtD(c.travado_em) + '</span>';
-  $('cicloKpis').innerHTML = [['Itens', ps.length], ['Valor', fmtR.format(ps.reduce(function(s, i){ return s + tot(i); }, 0))],
-    ['Fornecedores', new Set(ps.map(function(i){ return i.cnpj || '?'; })).size], ['Itens cotados', ps.filter(function(i){ return i.cotacoes > 0; }).length],
-    ['Incluídos após a abertura', apos.length], ['Retirados após a abertura', ret.length],
-    ['Convites enviados', nEm('convite')], ['Avisos de inclusão', nEm('inclusao')], ['Avisos de retirada', nEm('retirada')]]
-    .map(function(k){ return '<div class="kpi"><small>' + k[0] + '</small><b>' + (typeof k[1] === 'number' ? fmtI.format(k[1]) : k[1]) + '</b></div>'; }).join('');
-  var conf = function(acao, txt, txtConf){ return '<button class="' + (acao === 'travar' ? 'sec perigo' : '') + '" data-ciclo="' + acao + '">' + (confirmaCiclo === acao ? txtConf : txt) + '</button>'; };
-  acoes.innerHTML = c.status === 'montagem' ? conf('lancar', 'Lançar ciclo ' + c.id, 'Confirmar: abrir a cotação e convidar os fornecedores')
-    : c.status === 'aberto' ? conf('travar', 'Travar ciclo ' + c.id, 'Confirmar: travar (não aceita mais itens nem preços)') : '';
+  $('cicloDatas').innerHTML = '<span>Criado ' + fmtD(c.criado_em) + (c.criado_por ? ' por ' + esc(c.criado_por) : '') + '</span><span>Lançado ' + fmtD(c.aberto_em) + '</span><span>Fechamento ' + dataHora(c.fecha_em) + '</span><span>Travado ' + fmtD(c.travado_em) + (c.travado_por === 'prazo de fechamento' ? ' (no prazo)' : '') + '</span>';
+  var k = [['Itens', fmtI.format(ps.length)], ['Subtotal', fmtR.format(ps.reduce(function(s, i){ return s + totItem(i); }, 0))]];
+  if (c.status === 'montagem') k.push(['Fornecedores habituais', fmtI.format(habituais)], ['Com acesso liberado', fmtI.format(CIC.fornecedores_com_acesso || 0)]);
+  else k.push(['Itens cotados', fmtI.format(ps.filter(function(i){ return i.cotacoes > 0; }).length) + ' de ' + fmtI.format(ps.length)], ['Convites enviados', fmtI.format(nEm('convite', 'enviado')) + ' de ' + fmtI.format(nEm('convite'))],
+              ['Incluídos após a abertura', fmtI.format(apos.length)], ['Retirados', fmtI.format(ret.length)]);
+  $('cicloKpis').innerHTML = k.map(function(x){ return '<div class="kpi"><small>' + x[0] + '</small><b>' + x[1] + '</b></div>'; }).join('');
+  // prazo e ações
+  acoes.innerHTML = c.status === 'aberto' ? '<button class="sec perigo" data-ciclo="travar">' + (confirmaCiclo === 'travar' ? 'Confirmar: travar agora (fornecedores param de editar)' : 'Travar agora') + '</button>' : '';
+  pb.hidden = c.status === 'travado';
+  if (c.status === 'montagem') {
+    $('lcPrazoTitulo').textContent = 'Lançar o ciclo e enviar os convites por e-mail';
+    $('lcPrazoTexto').textContent = 'Informe até quando os fornecedores podem preencher e alterar a cotação. Nesse horário a cotação fecha sozinha: o fornecedor não altera mais preço nem quantidade mínima, e o ciclo é travado. O convite vai por e-mail para os ' + fmtI.format(CIC.fornecedores_com_acesso || 0) + ' fornecedores com acesso liberado; os habituais sem acesso ficam registrados como não enviados.';
+    if (!$('lcPrazo').value) { var dt = new Date(); dt.setDate(dt.getDate() + 3); dt.setHours(17, 0, 0, 0); $('lcPrazo').value = localInput(dt); }
+    $('lcBotao').textContent = confirmaCiclo === 'lancar' ? 'Confirmar: lançar e enviar convites' : 'Lançar ciclo e enviar convites';
+    $('lcBotao').className = ''; $('lcBotao').dataset.acao = 'lancar';
+  } else if (c.status === 'aberto') {
+    var fim = c.fechado_para_fornecedor;
+    $('lcPrazoTitulo').innerHTML = '<span class="prazo' + (fim ? ' fim' : '') + '">' + (fim ? 'Cotação fechada em ' : 'Cotação aberta até ') + dataHora(c.fecha_em) + (fim ? '' : ' · ' + faltam(c.fecha_em)) + '</span>';
+    $('lcPrazoTexto').textContent = 'Para prorrogar ou antecipar o fechamento, informe o novo horário. A mudança não gera e-mail aos fornecedores.';
+    if (!$('lcPrazo').value || $('lcPrazo').dataset.ciclo !== String(c.id)) { $('lcPrazo').value = c.fecha_em ? localInput(new Date(c.fecha_em)) : ''; $('lcPrazo').dataset.ciclo = c.id; }
+    $('lcBotao').textContent = 'Mudar o prazo'; $('lcBotao').className = 'sec'; $('lcBotao').dataset.acao = 'prazo';
+  }
   $('cicloApos').hidden = !apos.length;
-  $('cicloApos').innerHTML = '<h3>Adicionados após a abertura do ciclo (' + apos.length + ')</h3><ul>' + apos.map(function(i){ return '<li><b>' + esc(i.descr) + '</b> (' + i.cdpro + ') · ' + fmtI.format(i.quantidade) + ' ' + esc(i.unida) + ' · entrou em ' + fmtD(i.incluido_em) + '</li>'; }).join('') + '</ul>';
+  $('cicloApos').innerHTML = '<h3>Adicionados após a abertura do ciclo (' + apos.length + ')</h3><ul>' + apos.map(function(i){ return '<li><b>' + esc(i.descr) + '</b>' + (i.avulso ? '' : ' (' + i.cdpro + ')') + ' · ' + fmtI.format(i.quantidade) + ' ' + esc(i.unida) + ' · entrou em ' + fmtD(i.incluido_em) + '</li>'; }).join('') + '</ul>';
   $('cicloRet').hidden = !ret.length;
-  $('cicloRet').innerHTML = '<h3>Retirados após a abertura (inativos) (' + ret.length + ')</h3><ul>' + ret.map(function(i){ return '<li><b>' + esc(i.descr) + '</b> (' + i.cdpro + ') · retirado em ' + fmtD(i.retirado_em) + '</li>'; }).join('') + '</ul>';
+  $('cicloRet').innerHTML = '<h3>Retirados após a abertura (inativos) (' + ret.length + ')</h3><ul>' + ret.map(function(i){ return '<li><b>' + esc(i.descr) + '</b> · retirado em ' + fmtD(i.retirado_em) + '</li>'; }).join('') + '</ul>';
   $('cicloEmails').hidden = !em.length;
-  $('cicloEmails').innerHTML = '<h3>E-mails aos fornecedores (' + em.length + ')</h3><ul>' + em.map(function(m){ return '<li>' + (TIPO_EMAIL[m.tipo] || '') + ' ' + fmtD(m.criado_em) + ' · <b>' + esc(m.fornecedor) + '</b> · "' + esc(m.assunto) + '" · ' + (m.para && m.para.length ? 'para ' + m.para.map(esc).join(', ') + ' ' : '') + (ST_EMAIL[m.status] || esc(m.status)) + (m.erro ? ' <span class="mut">' + esc(m.erro) + '</span>' : '') + '</li>'; }).join('') + '</ul>';
+  $('cicloEmails').innerHTML = '<h3>E-mails aos fornecedores (' + em.length + ')</h3><ul>' + em.map(function(m){ return '<li>' + (TIPO_EMAIL[m.tipo] || '') + ' ' + fmtD(m.criado_em) + ' · <b>' + esc(m.fornecedor) + '</b> · ' + (m.para && m.para.length ? 'para ' + m.para.map(esc).join(', ') + ' ' : '') + (ST_EMAIL[m.status] || esc(m.status)) + (m.erro ? ' <span class="mut">' + esc(m.erro) + '</span>' : '') + '</li>'; }).join('') + '</ul>';
   $('linhasCiclo').innerHTML = ps.map(function(i){
-    return '<tr class="' + (i.lista <= 3 ? 'l' + i.lista : '') + '"><td>' + i.cdpro + '</td><td class="desc">' + esc(i.descr) + '</td><td>' + importancia(i.lista) + '</td>' +
-      '<td class="r"><b>' + fmtI.format(i.quantidade) + '</b> ' + esc(i.unida) + '</td><td class="r">' + (+i.prcomn ? fmtR.format(i.prcomn) : '–') + '</td>' +
-      '<td class="r">' + fmtR.format(tot(i)) + '</td><td title="' + esc(i.cnpj ? 'CNPJ ' + cnpjF(i.cnpj) : '') + '">' + esc(i.fornecedor || '–') + '</td>' +
-      '<td class="r">' + fmtI.format(i.cotacoes) + '</td><td class="r">' + (i.menor_preco != null ? fmtR.format(i.menor_preco) + '<div class="qsug">' + esc(i.menor_fornecedor || '') + '</div>' : '–') + '</td>' +
-      '<td>' + fmtD(i.incluido_em) + (i.apos_abertura ? ' <span class="chip warn">após abertura</span>' : '') + '</td>' +
-      '<td>' + (c.status !== 'travado' ? '<button class="sec mini" data-tirar="' + i.cdpro + '">' + (c.status === 'aberto' ? 'retirar' : 'tirar') + '</button>' : '') + '</td></tr>';
-  }).join('') || '<tr><td colspan="11" class="mut">Ciclo sem itens.</td></tr>';
-  $('cicloHist').textContent = c.status === 'aberto' ? 'Enquanto este ciclo estiver aberto, novos itens entram nele. O próximo ciclo começa depois de travar este.' : c.status === 'travado' ? 'Ciclo travado: quantidades congeladas no momento do travamento.' : '';
+    return '<tr class="' + (i.lista && i.lista <= 3 ? 'l' + i.lista : '') + '"><td>' + (i.avulso ? '<span class="chip">não cadastrado</span>' : i.cdpro) + '</td><td class="desc">' + esc(i.descr) + '</td><td>' + importancia(i.lista) + '</td>'
+      + '<td class="r"><b>' + fmtI.format(i.quantidade) + '</b> ' + esc(i.unida) + '</td><td class="r">' + (+i.prcomn ? fmtR.format(i.prcomn) : '–') + '</td>'
+      + '<td class="r">' + (totItem(i) ? fmtR.format(totItem(i)) : '–') + '</td><td>' + esc(i.fornecedor || '–') + '</td>'
+      + '<td class="r">' + fmtI.format(i.cotacoes) + '</td><td class="r">' + (i.menor_preco != null ? fmtR.format(i.menor_preco) + '<div class="qsug">' + esc(i.menor_fornecedor || '') + '</div>' : '–') + '</td>'
+      + '<td>' + fmtD(i.incluido_em) + (i.apos_abertura ? ' <span class="chip warn">após abertura</span>' : '') + '</td></tr>';
+  }).join('') || '<tr><td colspan="10" class="mut">Ciclo sem itens.</td></tr>';
+  $('cicloHist').textContent = c.status === 'montagem' ? 'Para mudar itens ou quantidades, volte à etapa 2.' : c.status === 'aberto' ? 'Enquanto a cotação estiver aberta, novos itens entram neste ciclo (etapa 1 ou 2) e os fornecedores são avisados.' : 'Ciclo travado: quantidades congeladas no travamento.';
 }
-$('cicloVer').addEventListener('change', function(){ verId = +$('cicloVer').value; confirmaCiclo = ''; ciclo(); });
-$('cicloAcoes').addEventListener('click', async function(e){
-  var b = e.target.closest('button[data-ciclo]'); if (!b || !CIC) return;
-  var a = b.dataset.ciclo, id = CIC.ciclo.id;
-  if (confirmaCiclo !== a) { confirmaCiclo = a; desenhaCiclo(); setTimeout(function(){ if (confirmaCiclo === a) { confirmaCiclo = ''; desenhaCiclo(); } }, 5000); return; }
+$('cicloVer').addEventListener('change', function(){ verId = +$('cicloVer').value; confirmaCiclo = ''; if (ATIVO && verId === ATIVO.id) verId = null; ciclo(); });
+$('lcBotao').addEventListener('click', async function(){
+  var b = $('lcBotao'), a = b.dataset.acao, v = $('lcPrazo').value, id = CIC && CIC.ciclo.id;
+  $('lcMsg').textContent = ''; $('lcMsg').classList.remove('e');
+  if (!v) { $('lcMsg').textContent = 'Informe a data e a hora de fechamento.'; $('lcMsg').classList.add('e'); return; }
+  var quando = new Date(v);
+  if (quando - Date.now() < 10 * 60000) { $('lcMsg').textContent = 'O fechamento precisa ser pelo menos 10 minutos depois de agora.'; $('lcMsg').classList.add('e'); return; }
+  if (a === 'lancar' && confirmaCiclo !== 'lancar') { confirmaCiclo = 'lancar'; desenhaCiclo(); $('lcMsg').textContent = 'Fechamento em ' + dataHora(quando.toISOString()) + '. Clique de novo para confirmar.'; setTimeout(function(){ if (confirmaCiclo === 'lancar') { confirmaCiclo = ''; desenhaCiclo(); } }, 8000); return; }
   confirmaCiclo = ''; b.disabled = true;
   try{
-    await rpc(a === 'lancar' ? 'compras_ciclo_lancar' : 'compras_ciclo_travar', {p_ciclo: id});
-    await recarregaAtivo(); await ciclo(); tabela();
+    if (a === 'lancar') { var r = await rpc('compras_ciclo_lancar', {p_ciclo: id, p_fecha_em: quando.toISOString()}); await ciclo(); tabela(); $('lcMsg').textContent = 'Ciclo lançado. ' + fmtI.format(r.com_destinatario) + (r.com_destinatario === 1 ? ' convite na fila de envio.' : ' convites na fila de envio.'); }
+    else { await rpc('compras_ciclo_prazo', {p_ciclo: id, p_fecha_em: quando.toISOString()}); await ciclo(); $('lcMsg').textContent = 'Prazo alterado.'; }
   }catch(e){ falha(e); desenhaCiclo(); }
+  finally{ b.disabled = false; }
 });
-$('linhasCiclo').addEventListener('click', async function(e){
-  var b = e.target.closest('button[data-tirar]'); if (!b) return;
-  b.disabled = true; await retirar(b.dataset.tirar); await ciclo(); tabela();
+$('cicloAcoes').addEventListener('click', async function(e){
+  var b = e.target.closest('button[data-ciclo]'); if (!b || !CIC) return;
+  if (confirmaCiclo !== 'travar') { confirmaCiclo = 'travar'; desenhaCiclo(); setTimeout(function(){ if (confirmaCiclo === 'travar') { confirmaCiclo = ''; desenhaCiclo(); } }, 6000); return; }
+  confirmaCiclo = ''; b.disabled = true;
+  try{ await rpc('compras_ciclo_travar', {p_ciclo: CIC.ciclo.id}); verId = null; await ciclo(); tabela(); }catch(er){ falha(er); desenhaCiclo(); }
 });
 
 /* ---------------- fornecedor: cotação ---------------- */
 async function carregaCotacao(){
   var r = await rpc('compras_cotacao_listar', {p_todos: true});
-  COT_CICLO = r && r.ciclo; COTS = (r && r.itens) || [];
+  COT_CICLO = r && r.ciclo; COTS = (r && r.itens) || []; COT_FECHA = r && r.fecha_em; COT_FECHADA = !!(r && r.fechada);
+  var fp = $('fornPrazo'); fp.hidden = !COT_FECHA;
+  if (COT_FECHA) { fp.className = 'prazo' + (COT_FECHADA ? ' fim' : ''); fp.textContent = COT_FECHADA ? 'Cotação fechada em ' + new Date(COT_FECHA).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) + ': não aceita mais alterações.' : 'Prazo: até ' + new Date(COT_FECHA).toLocaleString('pt-BR', {weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) + ' (horário de Brasília)'; }
   if (!COTS.some(function(i){ return i.habitual; }) && COTS.length) $('fornEscopo').value = 'todos';
 }
 async function cotar(cd, preco, min){
@@ -1070,12 +1252,12 @@ R.querySelectorAll('nav.tabs button').forEach(function(b){ b.addEventListener('c
 function abrir(t){
   if (PERM.abas.indexOf(t) < 0) t = 'lista';
   R.querySelectorAll('nav.tabs button').forEach(function(b){ b.setAttribute('aria-selected', b.dataset.tab === t); });
-  ['lista','curvas','ciclo','pedido','param','regras','fornec','acessos'].forEach(function(s){ $('sec-' + s).hidden = s !== t; });
+  ['lista','revisar','lancar','curvas','pedido','param','regras','fornec','acessos'].forEach(function(s){ $('sec-' + s).hidden = s !== t; });
   R.classList.toggle('app', t === 'lista');
   try{ localStorage.setItem('compras.aba', t); }catch(e){}
   if (!ME) return;
   if (t === 'fornec') cadastro();
-  if (t === 'ciclo') ciclo();
+  if (t === 'revisar' || t === 'lancar' || (t === 'lista' && PERM.ajusta)) ciclo();
   if (t === 'acessos') acessos();
   if (t === 'pedido') pfFornecedores();
 }
@@ -1089,6 +1271,7 @@ function aplicarPerfil(){
   R.querySelector('nav.tabs').hidden = PERM.abas.length < 2;
   $('avisoForn').hidden = !PERM.forn;
   $('fornNomeTopo').textContent = PERM.forn ? (ME.fornecedor || cnpjF(ME.cnpj)) : '';
+  R.querySelector('nav.tabs button[data-tab="lista"]').textContent = PERM.ajusta ? '1 · Escolher produtos' : (PERM.forn ? 'Cotação' : 'Lista de compras');
   mostrarParam();
   var aba = 'lista'; try{ aba = localStorage.getItem('compras.aba') || 'lista'; }catch(e){}
   abrir(aba);
