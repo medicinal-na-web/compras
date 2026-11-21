@@ -86,6 +86,7 @@
 #cmproot .emails{border:1px dashed var(--line); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px}
 #cmproot #twCiclo{max-height:calc(100dvh - var(--hdr, 130px) - 300px)}
 #cmproot #twCad{max-height:calc(100dvh - var(--hdr, 130px) - 230px)}
+#cmproot #twPf{max-height:calc(100dvh - var(--hdr, 130px) - 280px)}
 #cmproot #tblCad td{vertical-align:top}
 #cmproot #tblCad .em{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px}
 #cmproot #tblCad .em code{font-family:inherit; font-size:12.5px}
@@ -188,6 +189,7 @@
     <button role="tab" aria-selected="false" data-tab="param">Parâmetros</button>
     <button role="tab" aria-selected="false" data-tab="regras">Como é calculado</button>
     <button role="tab" aria-selected="false" data-tab="ciclo">Ciclo de compras</button>
+    <button role="tab" aria-selected="false" data-tab="pedido">Pedido por fornecedor</button>
     <button role="tab" aria-selected="false" data-tab="fornec">Fornecedores</button>
     <button role="tab" aria-selected="false" data-tab="acessos">Acessos</button>
   </nav>
@@ -211,6 +213,7 @@
       <div><label for="fLista">Lista</label><select id="fLista"><option value="">Todas</option><option value="1">Lista 1</option><option value="2">Lista 2</option><option value="3">Lista 3</option><option value="4">Lista 4</option><option value="5">Lista 5</option></select></div>
       <div><label for="fCtrl">Controlados</label><select id="fCtrl"><option value="">Todos</option><option value="1">Só controlados</option><option value="0">Sem controlados</option></select></div>
       <div><label for="fSitua">Situação no cadastro</label><select id="fSitua"><option value="">Todas</option><option value="A">Ativos (A)</option><option value="I">Inativos (I)</option></select></div>
+      <div><label for="fOrdem">Ordenar por</label><select id="fOrdem"><option value="total">Maior valor</option><option value="lista">Lista (1 a 5)</option><option value="descr">Alfabética</option></select></div>
       <div class="val"><label for="fForn">Fornecedor (último lote)</label><select id="fForn"><option value="">Todos</option></select></div>
     </div>
     <div class="cobfiltro">
@@ -292,6 +295,25 @@
     <p class="mut" id="cicloHist" style="font-size:12.5px"></p>
   </section>
 
+  <section id="sec-pedido" class="card" hidden>
+    <h2>Pedido por fornecedor</h2>
+    <p class="mut">Escolha o fornecedor, o valor do pedido e a base de consumo. O valor é distribuído entre os itens já comprados desse fornecedor nos últimos 3 anos, começando pelos que têm menos dias de estoque, até todos os itens comprados ficarem com os mesmos dias de estoque. Estoque = F1 × peso + F2, como no DiasConsumo (F1+F2). Quantidades arredondadas pelos passos do − / +.</p>
+    <div class="filtros">
+      <div style="grid-column:span 2"><label for="pfForn">Fornecedor</label><input id="pfForn" list="pfLista" placeholder="digite o nome ou o CNPJ"><datalist id="pfLista"></datalist></div>
+      <div><label for="pfValor">Valor do pedido (R$)</label><input id="pfValor" inputmode="decimal" placeholder="ex.: 50.000"></div>
+      <div><label for="pfBase">Consumo médio de</label><select id="pfBase"><option value="90">90 dias</option><option value="180">180 dias</option></select></div>
+      <div><label for="pfOrdem">Ordenar por</label><select id="pfOrdem"><option value="total">Maior valor</option><option value="lista">Lista (1 a 5)</option><option value="descr">Alfabética</option><option value="dias">Menos dias de estoque</option></select></div>
+      <div><label for="pfTodos">Mostrar</label><select id="pfTodos"><option value="0">Itens do pedido</option><option value="1">Todos os itens do fornecedor</option></select></div>
+      <div><button id="pfCalcular" style="width:100%">Calcular pedido</button></div>
+    </div>
+    <div class="mini-kpis" id="pfKpis"></div>
+    <div class="row" style="justify-content:space-between"><p class="mut" id="pfConta" style="font-size:13px"></p><div class="row"><button class="sec mini" id="pfCopiar" hidden>Copiar para Excel</button><span class="msg" id="pfMsg" role="status"></span></div></div>
+    <div class="tw" id="twPf"><table class="tbl" id="tblPf"><thead><tr>
+      <th>Cód.</th><th>Descrição</th><th>Lista</th><th class="r">Estoque F1</th><th class="r">Estoque F2</th><th class="r" id="pfThCons">Consumo 90 d</th><th class="r" title="Dias de estoque hoje: (F1 × peso + F2) ÷ consumo por dia">Dias hoje</th>
+      <th class="r">Quantidade</th><th class="r">Preço compra</th><th class="r">Total</th><th class="r" title="Dias de estoque depois da compra">Dias após</th><th>Último lote</th>
+    </tr></thead><tbody id="linhasPf"></tbody></table></div>
+  </section>
+
   <section id="sec-fornec" class="card" hidden>
     <h2>Fornecedores e acesso à cotação</h2>
     <p class="mut">Cadastro de fornecedores do FórmulaCerta (FC02000). Só quem tem e-mail no cadastro pode receber acesso: o login é por código enviado a esse e-mail. Para liberar um fornecedor sem e-mail, cadastre o e-mail dele no FórmulaCerta; ele aparece aqui na próxima carga (todo dia de manhã).</p>
@@ -348,6 +370,7 @@
         <li><b>Quantidade</b> = consumo por dia × dias de compra, arredondada para cima: 1, 5, 10, 25, 50, 100, 250, 500, 1.000, 2.500, 5.000, 10.000, 25.000, 50.000, 100.000, 150.000, 300.000.</li>
         <li><b>Ajuste da quantidade</b>: os botões − e + andam em passos conforme a sugestão: a partir de 25.000, de 5.000 em 5.000; de 2.500 a 10.000, de 500 em 500; de 500 a 1.000, de 50 em 50; de 50 a 250, de 10 em 10; abaixo de 50, de 1 em 1. Também dá para digitar o valor.</li>
         <li><b>Ciclo de compras</b>: o comprador filtra a lista, marca os itens (o quadradinho do cabeçalho marca todos do filtro), desmarca o que não deve entrar e clica em "Aplicar ao ciclo". Repete com outros filtros. Ao lançar, o ciclo abre a cotação e envia convite por e-mail aos fornecedores com acesso liberado; ainda aceita itens, que ficam marcados como adicionados após a abertura e geram e-mail aos fornecedores. Desmarcar um item do ciclo aberto o retira (fica inativo) e avisa os fornecedores. Só existe um ciclo ativo por vez. Ao travar, não entra nem sai mais nada.</li>
+        <li><b>Pedido por fornecedor</b>: escolhido o fornecedor, o valor e a base (consumo médio de 90 ou 180 dias), entram os itens com lote desse fornecedor nos últimos 3 anos. O valor vai primeiro para os itens com menos dias de estoque e sobe todos até o mesmo número de dias; itens já acima disso ficam de fora. Quantidade = consumo por dia × dias que faltam, arredondada pelos passos do − / +.</li>
         <li><b>Cotação do fornecedor</b>: ele informa o preço por unidade e a quantidade mínima. Depois do primeiro preço, só pode reduzir (−5%, −10% ou um valor menor digitado). Enquanto não reduz, vê se tem o menor preço; depois da redução, o resultado fica oculto. Total = preço × a maior entre a quantidade pedida e a mínima.</li>
       </ol>
       <p class="mut">Consumo = fórmulas manipuladas (FC12110) + ordens de produção (FC18100). Estoque = soma do estoque atual dos lotes (FC03140) nas filiais 1 e 2. Fornecedor do item = lote de entrada mais recente (FC03140), com o nome do cadastro FC02000.</p>
@@ -464,8 +487,8 @@ var COTS = [], COT_CICLO = null;   // cotação do fornecedor
 var CAD = null, ACESSOS = null;
 var SEL = new Set();
 var PERFIS = {
-  admin:      {abas:['lista','curvas','ciclo','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
-  comprador:  {abas:['lista','ciclo','param','regras','fornec'], internos:true, valores:true, ajusta:true, param:false, curvas:false, ocultar:[8, 9, 14]},
+  admin:      {abas:['lista','curvas','ciclo','pedido','param','regras','fornec','acessos'], internos:true,  valores:true,  ajusta:true,  param:true,  curvas:true},
+  comprador:  {abas:['lista','ciclo','pedido','param','regras','fornec'], internos:true, valores:true, ajusta:true, param:false, curvas:false, ocultar:[8, 9, 14]},
   producao:   {abas:['lista','curvas','param','regras'],        internos:true, valores:false, ajusta:false, param:false, curvas:true},
   fornecedor: {abas:['lista'], internos:false, valores:false, ajusta:false, param:false, curvas:false, forn:true}
 };
@@ -627,10 +650,15 @@ function filtrar(){
   });
   impactoMax = Math.max.apply(null, [0].concat(filtrados.map(function(p){ return p.impacto; })));
   var k = ord.k, dir = ord.dir;
-  filtrados.sort(function(a, b){
-    var x = a[k] == null ? -Infinity : a[k], y = b[k] == null ? -Infinity : b[k];
-    return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir || a.cdpro - b.cdpro;
-  });
+  filtrados.sort(function(a, b){ return compara(a, b, k, dir); });
+  $('fOrdem').value = (k === 'lista' || k === 'descr') ? k : (k === 'total' ? 'total' : '');
+}
+var chaveNome = function(d){ return String(d || '').replace(/^[^0-9A-Za-zÀ-ÿ]+/, ''); };
+function compara(a, b, k, dir){
+  if (k === 'descr') return chaveNome(a.descr).localeCompare(chaveNome(b.descr), 'pt-BR') * dir || a.cdpro - b.cdpro;
+  if (k === 'lista') return ((a.lista || 9) - (b.lista || 9)) * dir || (b.total || 0) - (a.total || 0) || chaveNome(a.descr).localeCompare(chaveNome(b.descr), 'pt-BR');
+  var x = a[k] == null ? -Infinity : a[k], y = b[k] == null ? -Infinity : b[k];
+  return (typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : x - y) * dir || a.cdpro - b.cdpro;
 }
 var NOME_LISTA = {1:'essencial', 2:'alta', 3:'média', 4:'baixa', 5:'mínima'};
 var importancia = function(l){ return l == null ? '–' : '<span class="imp" title="Lista ' + l + ' · importância ' + NOME_LISTA[l] + '">' + [1,2,3,4,5].map(function(i){ return '<i class="' + (i <= 6 - l ? 'on' : '') + '"></i>'; }).join('') + '<b>' + l + '</b></span>'; };
@@ -866,6 +894,82 @@ $('linhasForn').addEventListener('click', function(e){
 $('linhasForn').addEventListener('keydown', function(e){ if (e.key === 'Enter' && e.target.matches('input[data-c]')) e.target.blur(); });
 $('fornEscopo').addEventListener('change', function(){ limite = 200; filtrar(); tabela(); });
 
+
+/* ---------------- pedido por fornecedor ---------------- */
+var PF_FORN = null, PF = null;
+async function pfFornecedores(){
+  if (PF_FORN) return;
+  try{ PF_FORN = await rpc('compras_fornecedores_com_itens', {}) || []; }catch(e){ falha(e); return; }
+  $('pfLista').innerHTML = PF_FORN.map(function(f){ return '<option value="' + esc(f.nome) + ' · ' + cnpjF(f.cnpj) + '">' + f.itens + ' itens · última entrada ' + (f.ultima ? new Date(f.ultima + 'T12:00').toLocaleDateString('pt-BR') : '–') + '</option>'; }).join('');
+}
+function pfCnpj(){
+  var v = $('pfForn').value, d = v.replace(/\D/g, '');
+  var m = d.length >= 14 ? d.slice(-14) : null;
+  if (m && PF_FORN && PF_FORN.some(function(f){ return f.cnpj === m; })) return m;
+  var q = v.split(' · ')[0].trim().toLowerCase(); if (!q) return null;
+  var exato = (PF_FORN || []).filter(function(f){ return String(f.nome).toLowerCase() === q; });
+  if (exato.length === 1) return exato[0].cnpj;
+  var achou = (PF_FORN || []).filter(function(f){ return String(f.nome).toLowerCase().indexOf(q) >= 0; });
+  if (achou.length === 1) return achou[0].cnpj;
+  pfAmbiguo = achou.length;
+  return null;
+}
+var pfAmbiguo = 0;
+$('pfCalcular').addEventListener('click', async function(){
+  var cn = pfCnpj(), v = lerNum($('pfValor').value);
+  $('pfMsg').textContent = ''; $('pfMsg').classList.remove('e');
+  pfAmbiguo = 0; cn = pfCnpj();
+  if (!cn) { $('pfMsg').textContent = pfAmbiguo > 1 ? pfAmbiguo + ' fornecedores com esse nome: escolha um da lista (mostra o CNPJ).' : 'Escolha um fornecedor da lista.'; $('pfMsg').classList.add('e'); return; }
+  if (!(v > 0)) { $('pfMsg').textContent = 'Informe o valor do pedido.'; $('pfMsg').classList.add('e'); return; }
+  $('pfCalcular').disabled = true;
+  try{ PF = await rpc('compras_pedido_fornecedor', {p_cnpj: cn, p_valor: v, p_base: +$('pfBase').value}); pfDesenha(); }
+  catch(e){ falha(e); }
+  finally{ $('pfCalcular').disabled = false; }
+});
+function pfLinhas(){
+  if (!PF) return [];
+  var todos = $('pfTodos').value === '1', o = $('pfOrdem').value;
+  var l = PF.itens.filter(function(i){ return todos || +i.qtd > 0; }).map(function(i){ i.total = +i.total; return i; });
+  l.sort(function(a, b){
+    if (o === 'dias') return (a.dias_atual == null ? 1e12 : +a.dias_atual) - (b.dias_atual == null ? 1e12 : +b.dias_atual) || chaveNome(a.descr).localeCompare(chaveNome(b.descr), 'pt-BR');
+    return compara(a, b, o, o === 'total' ? -1 : 1);
+  });
+  return l;
+}
+function pfDesenha(){
+  if (!PF) return;
+  var comprados = PF.itens.filter(function(i){ return +i.qtd > 0; }), l = pfLinhas(), un = function(i){ return esc(i.unida || ''); };
+  var motivos = {}; PF.itens.forEach(function(i){ if (i.motivo) motivos[i.motivo] = (motivos[i.motivo] || 0) + 1; });
+  $('pfThCons').textContent = 'Consumo ' + PF.base + ' d';
+  $('pfKpis').innerHTML = [['Fornecedor', esc(PF.fornecedor || cnpjF(PF.cnpj))], ['Valor pedido', fmtR.format(PF.valor)], ['Total sugerido', fmtR.format(PF.total)],
+    ['Itens no pedido', fmtI.format(comprados.length) + ' de ' + fmtI.format(PF.itens.length)], ['Estoque após a compra', PF.dias_alvo != null ? fmtN.format(PF.dias_alvo) + ' dias' : '–']]
+    .map(function(k){ return '<div class="kpi"><small>' + k[0] + '</small><b>' + k[1] + '</b></div>'; }).join('');
+  $('pfConta').textContent = 'Base: consumo médio de ' + PF.base + ' dias. ' + Object.keys(motivos).map(function(m){ return fmtI.format(motivos[m]) + ' ' + m; }).join(' · ');
+  $('pfCopiar').hidden = !comprados.length;
+  $('linhasPf').innerHTML = l.map(function(i){
+    return '<tr class="' + (+i.qtd > 0 ? 'compra' : '') + (i.lista && i.lista <= 3 ? ' l' + i.lista : '') + '"><td>' + i.cdpro + '</td>' +
+      '<td class="desc">' + esc(i.descr) + (i.situa && i.situa !== 'A' ? ' <span class="chip">inativo</span>' : '') + (i.habitual ? '' : ' <span class="chip" title="O último lote deste item veio de outro fornecedor">outro fornecedor no último lote</span>') + '</td>' +
+      '<td>' + importancia(i.lista) + '</td><td class="r">' + fmtN.format(+i.e1 || 0) + '</td><td class="r">' + fmtN.format(+i.e2 || 0) + '</td>' +
+      '<td class="r">' + fmtM(+i.consumo_base || 0) + ' ' + un(i) + '</td>' +
+      '<td class="r">' + (i.dias_atual != null ? fmtI.format(i.dias_atual) + ' d' : '–') + '</td>' +
+      '<td class="r">' + (+i.qtd > 0 ? '<b>' + fmtI.format(i.qtd) + '</b> ' + un(i) : '<span class="mut">' + esc(i.motivo || '–') + '</span>') + '</td>' +
+      '<td class="r">' + (+i.preco ? fmtR.format(i.preco) : '<span class="chip warn">sem preço</span>') + '</td>' +
+      '<td class="r">' + (i.total ? fmtR.format(i.total) : '–') + '</td>' +
+      '<td class="r">' + (i.dias_apos != null && +i.qtd > 0 ? fmtI.format(i.dias_apos) + ' d' : '–') + '</td>' +
+      '<td>' + (i.ultima ? new Date(i.ultima + 'T12:00').toLocaleDateString('pt-BR') : '–') + '</td></tr>';
+  }).join('') || '<tr><td colspan="12" class="mut">Nenhum item com esses filtros.</td></tr>';
+}
+['pfOrdem', 'pfTodos'].forEach(function(id){ $(id).addEventListener('change', pfDesenha); });
+$('pfValor').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('pfCalcular').click(); });
+$('pfCopiar').addEventListener('click', async function(){
+  var n = function(v){ return v == null ? '' : String(Math.round(v * 100) / 100).replace('.', ','); };
+  var l = pfLinhas().filter(function(i){ return +i.qtd > 0; });
+  var txt = ['Código\tDescrição\tUnidade\tLista\tEstoque F1\tEstoque F2\tConsumo ' + PF.base + 'd\tDias hoje\tQuantidade\tPreço compra\tTotal\tDias após']
+    .concat(l.map(function(i){ return [i.cdpro, i.descr, i.unida, i.lista || '', n(+i.e1), n(+i.e2), n(+i.consumo_base), n(i.dias_atual), i.qtd, n(+i.preco), n(i.total), n(i.dias_apos)].join('\t'); })).join('\n');
+  try{ await navigator.clipboard.writeText(txt); $('pfMsg').textContent = fmtI.format(l.length) + ' linhas copiadas. Cole no Excel.'; }
+  catch(e){ $('pfMsg').textContent = 'O navegador bloqueou a cópia.'; }
+});
+
 /* ---------------- fornecedores (cadastro FC02000) ---------------- */
 async function cadastro(){
   if (!CAD) {
@@ -966,13 +1070,14 @@ R.querySelectorAll('nav.tabs button').forEach(function(b){ b.addEventListener('c
 function abrir(t){
   if (PERM.abas.indexOf(t) < 0) t = 'lista';
   R.querySelectorAll('nav.tabs button').forEach(function(b){ b.setAttribute('aria-selected', b.dataset.tab === t); });
-  ['lista','curvas','ciclo','param','regras','fornec','acessos'].forEach(function(s){ $('sec-' + s).hidden = s !== t; });
+  ['lista','curvas','ciclo','pedido','param','regras','fornec','acessos'].forEach(function(s){ $('sec-' + s).hidden = s !== t; });
   R.classList.toggle('app', t === 'lista');
   try{ localStorage.setItem('compras.aba', t); }catch(e){}
   if (!ME) return;
   if (t === 'fornec') cadastro();
   if (t === 'ciclo') ciclo();
   if (t === 'acessos') acessos();
+  if (t === 'pedido') pfFornecedores();
 }
 function aplicarPerfil(){
   R.classList.toggle('sem-int', !PERM.internos);
@@ -990,6 +1095,7 @@ function aplicarPerfil(){
 }
 
 /* ---------------- filtros, ordenação, edição ---------------- */
+$('fOrdem').addEventListener('change', function(){ var v = $('fOrdem').value; ord = {k: v, dir: v === 'total' ? -1 : 1}; filtrar(); tabela(); });
 ['fBusca','fIndica','fLista','fCtrl','fSitua','fCobTipo','fCobMin','fCobMax','fForn'].forEach(function(id){ $(id).addEventListener('input', function(){ limite = 200; filtrar(); tabela(); }); });
 R.querySelectorAll('#tbl th').forEach(function(th){ th.addEventListener('click', function(){
   var k = th.dataset.k; ord = {k:k, dir: ord.k === k ? -ord.dir : (k === 'descr' || k === 'cdpro' || k === 'lista' ? 1 : -1)};
