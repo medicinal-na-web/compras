@@ -32,6 +32,11 @@ O conteúdo fica em `public._brasa_parts_compras` (partes base64 de 8.000 caract
 Infalltech): lê `brasa_loader_compras()` com a chave anon, injeta o HTML e recria as tags `<script>`.
 Publicar versões novas continua sendo só no banco; o `index.html` não muda.
 
+Endereço definido: **https://portalcompras.medicinalnaweb.com.br** (servidor da Infalltech, 45.170.26.29).
+1. DNS: registro A `portalcompras` → 45.170.26.29 no domínio medicinalnaweb.com.br.
+2. CloudPanel: criar um site estático para `portalcompras.medicinalnaweb.com.br` e emitir o certificado (Let's Encrypt).
+3. Subir `portal/index.html` como `index.html` na raiz do site. Nada mais é preciso: o app vem do Supabase.
+
 ## Peças fora deste arquivo
 - Carga diária do FórmulaCerta: workflow n8n "Compras - Carga FórmulaCerta (réplica)" (`n8n/compras-carga-formulacerta.js`), 5h40.
 - E-mails aos fornecedores: workflow n8n "Compras - Envio de e-mails aos fornecedores" (`n8n/compras-envio-emails.js`), lê a fila `compras_email`.
